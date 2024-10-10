@@ -1,0 +1,20 @@
+{
+  "name": "svg-painter",
+  "version": "1.0.0",
+  "description": "based on paper.js",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "svg;painter"
+  ],
+  "author": "AC",
+  "license": "MIT",
+  "dependencies": {
+    "paper": "^0.12.18",
+    "vite": "^5.4.8"
+  }
+}

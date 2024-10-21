@@ -1,60 +1,64 @@
-import paper from 'paper'
+import svgFunc from './main.js'
+const svgPainter1 = svgFunc()
 
-function createPaths() {
-  function createBlob(center, maxRadius, points) {
-    var path = new paper.Path();
-    path.closed = true;
-    for (var i = 0; i < points; i++) {
-      var delta = new paper.Point({
-        length: (maxRadius * 0.5) + (Math.random() * maxRadius * 0.5),
-        angle: (360 / points) * i
-      });
-      path.add(center.add(delta));
-    }
-    path.smooth();
-    return path;
-  }
+svgPainter1.EXP_init({
+  canvasSelector: '#myCanvas1'
+})
 
-  var values = {
-    paths: 3,
-    minPoints: 5, // 最少多少个点
-    maxPoints: 15, // 最多多少个点
-    minRadius: 30, // 最小间距-半径
-    maxRadius: 90   // 最大间距-半径
-  };
-
-  var radiusDelta = values.maxRadius - values.minRadius;
-  var pointsDelta = values.maxPoints - values.minPoints;
-  for (var i = 0; i < values.paths; i++) {
-    var radius = values.minRadius + Math.random() * radiusDelta;
-    var points = values.minPoints + Math.floor(Math.random() * pointsDelta);
-    var path = createBlob(paper.view.size.multiply(paper.Point.random()), radius, points);
-    var lightness = (Math.random() - 0.5) * 0.4 + 0.4;
-    var hue = Math.random() * 360;
-    path.fillColor = { hue: hue, saturation: 1, lightness: lightness, alpha: 0.3 };
-    path.strokeColor = 'black';
-  }
-  paper.view.update()
-}
-
-window.svgPainter.EXP_loadBackground('cat.jpg', async function(image) {
-  const raster = new paper.Raster(image);
-  raster.position = paper.view.center;
-
+// 设置背景绘制
+svgPainter1.EXP_loadBackground('cat.jpg', async function() {
+  // 添加图片绘制区域
+  svgPainter1.EXP_drawImage('./Camera.png', 0, 100, '图标1')
+  svgPainter1.EXP_drawImage('./Camera.png', 100, 100, '图标2')
+  svgPainter1.EXP_drawImage('./Camera.png', 200, 100, '图标3')
+  
   // 手动绘制区域
-  await window.svgPainter.EXP_startDraw('区域-头部')
-  await window.svgPainter.EXP_startDraw('区域-身体')
+  const areaOne = await svgPainter1.EXP_startDraw('区域-头部', '#ccaabb88')
+  const areaTwo = await svgPainter1.EXP_startDraw('区域-身体')
   
-  // 自定义事件
-  window.svgPainter.EXP_AreaEvent('click', (event, path) => {
-    console.log('我的自定义函数Click：'+path.name, event)
+  // 修改区域颜色
+  svgPainter1.EXP_changeAreaFillColor('区域-头部', '#ff0000')
+  
+  // 自定义事件1
+  svgPainter1.EXP_areaEvent('click', (event, path) => {
+    console.log('我的自定义函数Click：'+path.area_name, event)
   })
 
-  window.svgPainter.EXP_AreaEvent('mouseenter', (event, path) => {
-    console.log('我的自定义函数Enter：'+path.name, event)
+  // 自定义事件2
+  svgPainter1.EXP_areaEvent('mouseenter', (event, path) => {
+    console.log('我的自定义函数Enter：'+path.area_name, event)
+  })
+
+  // 自定义事件3
+  svgPainter1.EXP_areaEvent('mouseleave', (event, path) => {
+    console.log('我的自定义函数Leave：'+path.area_name, event)
   })
   
-  window.svgPainter.EXP_AreaEvent('mouseleave', (event, path) => {
-    console.log('我的自定义函数Leave：'+path.name, event)
+  // 获取所有区域
+  console.log(svgPainter1.EXP_areaGetAll())
+  // 导出JSON数据
+  console.log(svgPainter1.svgConfig.scope.paper.project.exportJSON())
+  
+  // 查找区域
+  const area1 = svgPainter1.EXP_findAreaByName('图标1')
+  const area2 = svgPainter1.EXP_findAreaByName('图标2')
+  
+  // 绘制线条 直线 or 曲线
+  const path = svgPainter1.EXP_drawLine([{x: 0, y: 0}, {x: 50, y: 50}, {x: 30, y: 90}], '标记-直线1', {
+    strokeColor: '#ff0000',
+    strokeWidth: 8,
+  })
+
+  // 根据区域，绘制线条
+  const path2 = svgPainter1.EXP_drawAreaLine(['图标1', '图标2', '图标3'], '标记-线条1', {
+    strokeColor: '#00ff00',
+    strokeWidth: 8,
+  })
+  
+  // 绘制文字
+  const path3 = svgPainter1.EXP_drawText('你好，我是测试文字', 50, 50, '标记-文字1', {
+    strokeColor: '#0000ff',
   })
 })
+
+

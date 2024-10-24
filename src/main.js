@@ -7,6 +7,7 @@ import paper from 'paper';
 
 export default function() {
   const AREA_TYPE = '自定义';
+  const AREA_TYPE_IMG = '图像';
   const scope = new paper.PaperScope()
   
   let svgConfig = {
@@ -22,6 +23,8 @@ export default function() {
       tolerance: 5
     },
     areaWatch: [],
+    level_background: null,
+    level_imageIcon: null,
   }
 
   class HistoryStack {
@@ -102,36 +105,44 @@ export default function() {
     if (!hitResult)
       return;
 
+    activeShape = hitResult.item;
+    console.log('点击了：' + (activeShape.area_name || hitResult.type))
+    
+    // 绘制的模式时，才可以修改
+    if(!svgConfig.drawEnable) return;
+
     if (event.modifiers.shift) {
       if (hitResult.type === 'segment') {
         hitResult.segment.remove();
         svgConfig.history.save()
       }
     }
-
-    if (hitResult) {
-      activeShape = hitResult.item;
-      console.log('点击了：' + (activeShape.area_name || hitResult.type))
-
-      if (hitResult.type === 'pixel') { // 跳过图片处理
-        choosePoint = null;
-        activeShape = null;
-      } else if (hitResult.type === 'segment') { // 点位
-        choosePoint = hitResult.segment;
-      } else if (hitResult.type === 'stroke') { // 线条
-        const location = hitResult.location;
-        choosePoint = activeShape.insert(location.index + 1, event.point);
-        activeShape.smooth();
-        svgConfig.history.save()
-      } else if (hitResult.type === 'fill') { // 填充的图像
+    
+    if (hitResult.type === 'pixel') { // 跳过图片处理
+      if(activeShape.area_type) {
         scope.paper.project.activeLayer.selected = false;
         hitResult.item.selected = true;
-        scope.paper.project.activeLayer.addChild(hitResult.item);
+      } else {
+        choosePoint = null;
+        activeShape = null;
       }
+    } else if (hitResult.type === 'segment') { // 点位
+      choosePoint = hitResult.segment;
+    } else if (hitResult.type === 'stroke') { // 线条
+      const location = hitResult.location;
+      choosePoint = activeShape.insert(location.index + 1, event.point);
+      activeShape.smooth();
+      svgConfig.history.save()
+    } else if (hitResult.type === 'fill') { // 填充的图像
+      scope.paper.project.activeLayer.selected = false;
+      hitResult.item.selected = true;
     }
   }
 
   function onMouseDrag(event) {
+    // 绘制的模式时，才可以修改
+    if(!svgConfig.drawEnable) return;
+    
     if (choosePoint) { // 增加点位
       choosePoint.point = choosePoint.point.add(event.delta);
       activeShape.smooth();
@@ -224,7 +235,15 @@ export default function() {
     image.src = imgUrl;
     image.onload = () => {
       const raster = new scope.paper.Raster(image);
+
+      if(!svgConfig.level_background) {
+        svgConfig.level_background = raster
+      } else {
+        raster.remove()
+      }
+      
       raster.position = scope.paper.view.center;
+      raster.insertBelow(scope.paper.project.activeLayer);
       callBack(image);
     }
   }
@@ -233,8 +252,8 @@ export default function() {
     return scope.paper.project.activeLayer.children.find(item => item.area_name === areaName)
   }
   
-  function EXP_changeAreaFillColor(areaName, toColor) {
-    const area = EXP_findAreaByName(areaName)
+  function EXP_changeAreaFillColor(area_name, toColor) {
+    const area = EXP_findAreaByName(area_name)
     if (area){
       area.fillColor = toColor
     } else {
@@ -243,17 +262,23 @@ export default function() {
     return area
   }
 
-  function EXP_drawImage(imgUrl, x = 50, y = 50, imgName, callBack = () => {}) {
+  function EXP_drawImage(imgUrl, x = 50, y = 50, area_name, callBack = () => {}) {
     const image = new Image();
     image.src = imgUrl;
     image.onload = () => {
       const raster = new scope.paper.Raster(image);
+      if(!svgConfig.level_imageIcon) {
+        svgConfig.level_imageIcon = raster
+      }
       raster.position = scope.paper.view.center;
-      raster.area_name = imgName
+      raster.area_name = area_name
+      raster.area_type = AREA_TYPE_IMG
       raster.position = new scope.paper.Point(raster.size.width / 2 + x, raster.size.height / 2 + y)
+      raster.bringToFront()
       callBack(image);
     }
   }
+  
   function EXP_drawText(textStr, x = 50, y = 50, textName, other_options = {}) {
     var text = new paper.PointText(Object.assign({
       point: [x, y], // 文本的位置
@@ -268,12 +293,14 @@ export default function() {
   }
   
   function EXP_drawLine(points = [], lineName = '线条-未命名', other_options = {}) {
-    return new scope.paper.Path(Object.assign({
+    const path = new scope.paper.Path(Object.assign({
       segments: points,
       strokeColor: 'black',
       fullySelected: true,
       area_name: lineName,
     }, other_options))
+    path.insertBelow(svgConfig.level_imageIcon);
+    return path;
   }
   
   function EXP_drawAreaLine(areaNames, lineName = '线条-未命名', other_options = {}) {
@@ -285,7 +312,7 @@ export default function() {
       return area
     })
     if(areas.length > 1) {
-      return new scope.paper.Path(Object.assign({
+      const path = new scope.paper.Path(Object.assign({
         segments: areas.map(item => {
           return {
             x: item.bounds.left + item.bounds.width / 2,
@@ -296,12 +323,13 @@ export default function() {
         fullySelected: true,
         area_name: lineName,
       }, other_options))
+      path.insertBelow(svgConfig.level_imageIcon);
+      return path
     }
   }
 
   // 绘制，返回Promise，resolve为路径
-  function EXP_startDraw(drawName = '区域-未命名', fillColor = undefined, other_options) {
-    svgConfig.drawEnable = true
+  function EXP_startDraw(area_name = '区域-未命名', fillColor = undefined, other_options) {
 
     var path = new scope.paper.Path({
       strokeColor: 'black',
@@ -320,8 +348,6 @@ export default function() {
     svgConfig.tool.on('mouseup', mouseUp)
 
     function mouseDown(event) {
-      if (!svgConfig.drawEnable) return
-      console.log(svgConfig.drawEnable)
       if (path) {
         path.selected = true;
       }
@@ -342,11 +368,11 @@ export default function() {
           strokeColor: 'black',
           fullySelected: true
         }, other_options));
+        path.insertAbove(svgConfig.level_background);
       }
     }
 
     function mouseDrag(event) {
-      if (!svgConfig.drawEnable) return
 
       if (selectedSegment) {
         selectedSegment.point = event.point;
@@ -358,21 +384,17 @@ export default function() {
 
     function mouseUp(event) {
       if (!selectedSegment) {
-        if (!svgConfig.drawEnable) return
 
         path.simplify(6);
         path.fullySelected = true;
         path.closed = true;
         path.smooth();
-        path.area_name = drawName;
+        path.area_name = area_name;
         path.area_type = AREA_TYPE;
 
         var lightness = (Math.random() - 0.5) * 0.4 + 0.4;
         var hue = Math.random() * 360;
         path.fillColor = fillColor || { hue: hue, saturation: 1, lightness: lightness, alpha: 0.3 };
-
-        // 只让画一次
-        svgConfig.drawEnable = false;
 
         // 解除原绘制事件
         svgConfig.tool.off('mousedown', mouseDown)

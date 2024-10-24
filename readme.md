@@ -12,7 +12,9 @@
 
 ### 配置SVG使用元素
 ```js
-import { svgPainter } from 'svg-painter';
+import svgInit from 'svg-painter';
+const svgPainter = svgInit()
+
 svgPainter.EXP_init({
   canvasSelector: '#myCanvas', // svg的选择器，默认为 #myCanvas
   drawEnable: false, // 启用绘制，默认为false
@@ -65,7 +67,9 @@ const path3 = svgPainter1.EXP_drawText('你好，我是测试文字', 50, 50, '�
 })
 ```
 
-### 添加绘制区域 - 用户一次性绘制，绘制完成之后用户可以自己调整边界
+### 添加绘制区域 - 用户一次性绘制，绘制完成之后用户可以自己调整边界；
+> 单击边缘会添加一个节点
+> shift + 单击，会删除一个节点
 ```js
 const area1 = svgPainter.EXP_startDraw(areaName, fillColor = randomColor)
 const area2 = svgPainter.EXP_startDraw('区域-头部', '#ccaabb88')

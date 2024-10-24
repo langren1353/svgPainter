@@ -2,11 +2,12 @@ import svgFunc from './main.js'
 const svgPainter1 = svgFunc()
 
 svgPainter1.EXP_init({
-  canvasSelector: '#myCanvas1'
+  canvasSelector: '#myCanvas1',
+  drawEnable: true, // 是否允许修改
 })
 
 // 设置背景绘制
-svgPainter1.EXP_loadBackground('cat.jpg', async function() {
+svgPainter1.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async function() {
   // 添加图片绘制区域
   svgPainter1.EXP_drawImage('./Camera.png', 0, 100, '图标1')
   svgPainter1.EXP_drawImage('./Camera.png', 100, 100, '图标2')

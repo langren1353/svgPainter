@@ -3,17 +3,19 @@
  *  不支持const、let
  *  不支持lambda表达式写法
  */
-import paper from 'paper';
+import paper from 'paper/dist/paper-core';
 
 export default function() {
   const AREA_TYPE = '自定义';
   const AREA_TYPE_IMG = '图像';
+  const AREA_TYPE_LINE = '线条';
+  const AREA_TYPE_TEXT = '文字';
   const scope = new paper.PaperScope()
   
   let svgConfig = {
     scope,
     canvasSelector: '#myCanvas',
-    tool: new scope.paper.Tool(),
+    tool: new scope.Tool(),
     drawEnable: false,
     history: null,
     hitOptions: {
@@ -31,19 +33,6 @@ export default function() {
     constructor() {
       this.pointsStack = []
       this.index = -1
-
-      // 监听scope.paper.project.activeLayer.children，如果有变更，那么调用一次save方法
-      const watchChildProxy = new Proxy(scope.paper.project, {
-        set: (target, property, value, receiver) => {
-          const result = Reflect.set(target, property, value, receiver);
-          return result;
-        },
-        deleteProperty: (target, property) => {
-          const result = Reflect.deleteProperty(target, property);
-          return result;
-        }
-      });
-      scope.paper.project = watchChildProxy;
     }
 
     // 主要调用这个
@@ -55,11 +44,11 @@ export default function() {
       if (this.pointsStack.length >= 20) {
         this.pointsStack.shift()
       }
-      const curJSON = scope.paper.project.exportJSON()
+      const curJSON = scope.project.exportJSON()
       const lastJSON = this.pointsStack[this.index]
       if (curJSON !== lastJSON) {
         console.log('调用了save')
-        this.push(scope.paper.project.exportJSON())
+        this.push(curJSON)
       }
     }
 
@@ -79,8 +68,8 @@ export default function() {
       if (this.index > 0) {
         console.log('调用了undo')
         this.index--
-        scope.paper.project.clear()
-        scope.paper.project.importJSON(this.pointsStack[this.index])
+        scope.project.clear()
+        scope.project.importJSON(this.pointsStack[this.index])
         return this.pointsStack[this.index]
       }
       return null
@@ -91,8 +80,8 @@ export default function() {
         this.index++
 
       console.log('调用了redo')
-      scope.paper.project.clear()
-      scope.paper.project.importJSON(this.pointsStack[this.index])
+      scope.project.clear()
+      scope.project.importJSON(this.pointsStack[this.index])
       return this.pointsStack[this.index]
     }
   }
@@ -101,7 +90,7 @@ export default function() {
 
   function onMouseDown(event) {
     choosePoint = activeShape = null;
-    var hitResult = scope.paper.project.hitTest(event.point, svgConfig.hitOptions);
+    var hitResult = scope.project.hitTest(event.point, svgConfig.hitOptions);
     if (!hitResult)
       return;
 
@@ -120,7 +109,7 @@ export default function() {
     
     if (hitResult.type === 'pixel') { // 跳过图片处理
       if(activeShape.area_type) {
-        scope.paper.project.activeLayer.selected = false;
+        scope.project.activeLayer.selected = false;
         hitResult.item.selected = true;
       } else {
         choosePoint = null;
@@ -134,7 +123,7 @@ export default function() {
       activeShape.smooth();
       svgConfig.history.save()
     } else if (hitResult.type === 'fill') { // 填充的图像
-      scope.paper.project.activeLayer.selected = false;
+      scope.project.activeLayer.selected = false;
       hitResult.item.selected = true;
     }
   }
@@ -180,17 +169,18 @@ export default function() {
   }
 
   function EXP_areaGetAll() {
-    return scope.paper.project.activeLayer.children.filter(item => item.area_type && item.area_type === AREA_TYPE)
+    return scope.project.activeLayer.children.filter(item => item.area_type && item.area_type === AREA_TYPE)
   }
 
   function EXP_deselectAll() {
-    scope.paper.project.activeLayer.selected = false;
+    scope.activate()
+    scope.project.activeLayer.selected = false;
   }
 
   // 导出多项为SVG
   function EXP_exportAreaSVG(area_names) {
-    const exportGroup = new scope.paper.Group();
-    for (var name in item_names) {
+    const exportGroup = new scope.Group();
+    for (var name in area_names) {
       const area = EXP_findAreaByName(name)
       if(area) {
         exportGroup.addChild(area);
@@ -205,7 +195,7 @@ export default function() {
   }
   
   function EXP_exportJSON() {
-    return scope.paper.project.exportJSON()
+    return scope.project.exportJSON()
   }
 
   // 导出为 SVG 字符串
@@ -216,11 +206,22 @@ export default function() {
   }
 
   function EXP_importJSON(exported_json) {
-    scope.paper.project.importJSON(exported_json)
+    scope.activate()
+    scope.project.importJSON(exported_json)
+    scope.project.activeLayer.children.forEach(item => {
+      if (!item.area_type) {
+        for(const name in item.data) {
+          item[name] = item.data[name]
+        }
+        bindPathEvent(item)
+      }
+    })
+    EXP_deselectAll()
   }
   
   function EXP_importSVG(svgString) {
-    scope.paper.project.importSVG(svgString, {
+    scope.activate()
+    scope.project.importSVG(svgString, {
       onLoad: function(item) {
         console.log('SVG 导入成功:', item);
       },
@@ -231,10 +232,11 @@ export default function() {
   }
 
   function EXP_loadBackground(imgUrl, callBack = ()=> {}) {
+    scope.activate()
     const image = new Image();
     image.src = imgUrl;
     image.onload = () => {
-      const raster = new scope.paper.Raster(image);
+      const raster = new scope.Raster(image);
 
       if(!svgConfig.level_background) {
         svgConfig.level_background = raster
@@ -242,17 +244,18 @@ export default function() {
         raster.remove()
       }
       
-      raster.position = scope.paper.view.center;
-      raster.insertBelow(scope.paper.project.activeLayer);
+      raster.position = scope.view.center;
+      raster.insertBelow(scope.project.activeLayer);
       callBack(image);
     }
   }
 
   function EXP_findAreaByName(areaName) {
-    return scope.paper.project.activeLayer.children.find(item => item.area_name === areaName)
+    return scope.project.activeLayer.children.find(item => item.area_name === areaName)
   }
   
   function EXP_changeAreaFillColor(area_name, toColor) {
+    scope.activate()
     const area = EXP_findAreaByName(area_name)
     if (area){
       area.fillColor = toColor
@@ -263,47 +266,69 @@ export default function() {
   }
 
   function EXP_drawImage(imgUrl, x = 50, y = 50, area_name, callBack = () => {}) {
+    scope.activate()
     const image = new Image();
     image.src = imgUrl;
     image.onload = () => {
-      const raster = new scope.paper.Raster(image);
+      const raster = new scope.Raster(image);
       if(!svgConfig.level_imageIcon) {
         svgConfig.level_imageIcon = raster
       }
-      raster.position = scope.paper.view.center;
-      raster.area_name = area_name
-      raster.area_type = AREA_TYPE_IMG
-      raster.position = new scope.paper.Point(raster.size.width / 2 + x, raster.size.height / 2 + y)
+      raster.position = scope.view.center;
+      raster.data = {
+        area_name: area_name,
+        area_type: AREA_TYPE_IMG,
+      }
+      for(const name in raster.data) {
+        raster[name] = raster.data[name]
+      }
+      raster.areaBind = () => {return 1}
+      raster.position = new scope.Point(raster.size.width / 2 + x, raster.size.height / 2 + y)
       raster.bringToFront()
       callBack(image);
     }
   }
   
   function EXP_drawText(textStr, x = 50, y = 50, textName, other_options = {}) {
+    scope.activate()
     var text = new paper.PointText(Object.assign({
       point: [x, y], // 文本的位置
       content: textStr, // 文本内容
       fillColor: 'black', // 文本颜色
       fontFamily: 'Arial', // 字体
       fontSize: 20, // 字体大小
-      area_name: textName
     }, other_options));
+    text.data = {
+      area_name: textName,
+      area_type: AREA_TYPE_TEXT,
+    }
+    for(const name in text.data) {
+      text[name] = text.data[name]
+    }
     text.bringToFront();
     return text;
   }
   
   function EXP_drawLine(points = [], lineName = '线条-未命名', other_options = {}) {
-    const path = new scope.paper.Path(Object.assign({
+    scope.activate()
+    const path = new scope.Path(Object.assign({
       segments: points,
       strokeColor: 'black',
       fullySelected: true,
-      area_name: lineName,
     }, other_options))
+    path.data = {
+      area_name: lineName,
+      area_type: AREA_TYPE_LINE,
+    }
+    for(const name in path.data) {
+      path[name] = path.data[name]
+    }
     path.insertBelow(svgConfig.level_imageIcon);
     return path;
   }
   
   function EXP_drawAreaLine(areaNames, lineName = '线条-未命名', other_options = {}) {
+    scope.activate()
     const areas = areaNames.map(item => {
       const area = EXP_findAreaByName(item)
       if (!area) {
@@ -312,7 +337,7 @@ export default function() {
       return area
     })
     if(areas.length > 1) {
-      const path = new scope.paper.Path(Object.assign({
+      const path = new scope.Path(Object.assign({
         segments: areas.map(item => {
           return {
             x: item.bounds.left + item.bounds.width / 2,
@@ -321,17 +346,66 @@ export default function() {
         }),
         strokeColor: 'black',
         fullySelected: true,
-        area_name: lineName,
       }, other_options))
+      path.data = {
+        area_name: lineName,
+        area_type: AREA_TYPE_LINE,
+      }
+      for(const name in path.data) {
+        path[name] = path.data[name]
+      }
       path.insertBelow(svgConfig.level_imageIcon);
       return path
     }
   }
+  
+  function bindPathEvent(path) {
+    ~(function(newPath){
+      // 绑定path事件
+      newPath.on('click', pathMouseClickEvent)
+      newPath.on('mouseenter', pathMouseHoverEvent)
+      newPath.on('mouseleave', pathMouseOutEvent)
+      newPath.on('mousemove', pathMouseMoveEvent)
+      newPath.on('doubleclick', () => {
+        EXP_deselectAll()
+      })
+
+      function pathMouseClickEvent(event) {
+        for (const item of svgConfig.areaWatch) {
+          if (item.watchEvent === 'click') {
+            item.callback(event, newPath)
+          }
+        }
+      }
+
+      function pathMouseHoverEvent(event) {
+        for (const item of svgConfig.areaWatch) {
+          if (item.watchEvent === 'mouseenter') {
+            item.callback(event, newPath)
+          }
+        }
+      }
+      function pathMouseOutEvent(event) {
+        for (const item of svgConfig.areaWatch) {
+          if (item.watchEvent === 'mouseleave') {
+            item.callback(event, newPath)
+          }
+        }
+      }
+      function pathMouseMoveEvent(event) {
+        for (const item of svgConfig.areaWatch) {
+          if (item.watchEvent === 'mousemove') {
+            item.callback(event, newPath)
+          }
+        }
+      }
+    })(path)
+  }
 
   // 绘制，返回Promise，resolve为路径
   function EXP_startDraw(area_name = '区域-未命名', fillColor = undefined, other_options) {
-
-    var path = new scope.paper.Path({
+    scope.activate()
+    var path = new scope.Path({
       strokeColor: 'black',
       fullySelected: true
     });
@@ -363,7 +437,7 @@ export default function() {
       }
 
       if (!selectedSegment) {
-        path = new scope.paper.Path(Object.assign({
+        path = new scope.Path(Object.assign({
           segments: [event.point],
           strokeColor: 'black',
           fullySelected: true
@@ -373,7 +447,6 @@ export default function() {
     }
 
     function mouseDrag(event) {
-
       if (selectedSegment) {
         selectedSegment.point = event.point;
         path.smooth();
@@ -389,8 +462,14 @@ export default function() {
         path.fullySelected = true;
         path.closed = true;
         path.smooth();
-        path.area_name = area_name;
-        path.area_type = AREA_TYPE;
+        path.data = {
+          area_name: area_name,
+          area_type: AREA_TYPE,
+        }
+        for(const name in path.data) {
+          path[name] = path.data[name]
+        }
+        path.areaBind = () => {return 1}
 
         var lightness = (Math.random() - 0.5) * 0.4 + 0.4;
         var hue = Math.random() * 360;
@@ -401,48 +480,7 @@ export default function() {
         svgConfig.tool.off('mousedrag', mouseDrag)
         svgConfig.tool.off('mouseup', mouseUp)
 
-        ~(function(newPath){
-          console.log(newPath.area_name)
-          // 绑定path事件
-          newPath.on('click', pathMouseClickEvent)
-          newPath.on('mouseenter', pathMouseHoverEvent)
-          newPath.on('mouseleave', pathMouseOutEvent)
-          newPath.on('mousemove', pathMouseMoveEvent)
-          newPath.on('doubleclick', () => {
-            EXP_deselectAll()
-          })
-
-          function pathMouseClickEvent(event) {
-            for (const item of svgConfig.areaWatch) {
-              if (item.watchEvent === 'click') {
-                item.callback(event, newPath)
-              }
-            }
-          }
-
-          function pathMouseHoverEvent(event) {
-            for (const item of svgConfig.areaWatch) {
-              if (item.watchEvent === 'mouseenter') {
-                item.callback(event, newPath)
-              }
-            }
-          }
-          function pathMouseOutEvent(event) {
-            for (const item of svgConfig.areaWatch) {
-              if (item.watchEvent === 'mouseleave') {
-                item.callback(event, newPath)
-              }
-            }
-          }
-          function pathMouseMoveEvent(event) {
-            for (const item of svgConfig.areaWatch) {
-              if (item.watchEvent === 'mousemove') {
-                item.callback(event, newPath)
-              }
-            }
-          }
-        })(path)
-
+        bindPathEvent(path)
         resolve(path)
       }
     }
@@ -451,7 +489,7 @@ export default function() {
 
   function init(myConfig  = {}) {
     svgConfig = Object.assign(svgConfig, myConfig)
-    scope.paper.setup(document.querySelector(svgConfig.canvasSelector))
+    scope.setup(document.querySelector(svgConfig.canvasSelector))
     svgConfig.tool.on('mousedown', onMouseDown)
     svgConfig.tool.on('mousedrag', onMouseDrag)
     svgConfig.tool.on('mouseup', onMouseUp)

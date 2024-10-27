@@ -95,6 +95,7 @@ const area = svgPainter.EXP_findAreaByName('区域-头部')
 ```js
 svgPainter.exportJSON(exported_json)
 或者
+svgPainter.svgConfig.scope.activate() // 需要先激活scope，否则多个会出现冲突
 svgPainter.svgConfig.scope.paper.project.exportJSON()
 ```
 
@@ -102,7 +103,8 @@ svgPainter.svgConfig.scope.paper.project.exportJSON()
 ```js
 svgPainter.importJSON(exported_json)
 或者
-svgPainter.svgConfig.scope.paper.project.importJSON(exported_json)
+svgPainter.svgConfig.scope.activate() // 需要先激活scope，否则多个会出现冲突
+svgPainter.svgConfig.scope.paper.project.importJSON(exported_json) // 但是这种方法会丢失函数触发
 ```
 
 ### 导出完整SVG

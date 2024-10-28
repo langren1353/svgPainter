@@ -77,8 +77,90 @@ svgPainter1.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/x
 })
 
 
-const json = [["Layer",{"applyMatrix":true,"selected":true,"children":[["Raster",{"applyMatrix":false,"matrix":[1,0,0,1,400,300],"crossOrigin":"","source":"https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg"}],["Path",{"applyMatrix":true,"selected":true,"data":{"area_name":"区域-身体","area_type":"自定义"},"segments":[[[588,183],[-18.46329,-10.06268],[18.46329,10.06268],7],[[624,214],[5.0692,-21.35369],[-5.0692,21.35369],7],[[555,287],[31.18649,-8.52255],[-31.18649,8.52255],7],[[492,238],[2.18484,31.44389],[-2.18484,-31.44389],7],[[535,161],[-19.92583,8.747],[19.92583,-8.747],7]],"closed":true,"fillColor":["hsl",79.46407,1,0.23588,0.3],"strokeColor":[0,0,0]}],["Path",{"applyMatrix":true,"selected":true,"data":{"area_name":"区域-头部","area_type":"自定义"},"segments":[[[326,119],[-8.48517,15.24441],[8.48517,-15.24441],7],[[384,124],[-21.61204,-22.2111],[21.61204,22.2111],7],[[420,224],[0.93333,-31.4],[-0.93333,31.4],7],[[375,270],[26.87871,1.8111],[-26.87871,-1.8111],7],[[304,232],[7.55184,16.15559],[-7.55184,-16.15559],7],[[323,183],[-5.08606,20.56654],[5.08606,-20.56654],7]],"closed":true,"fillColor":[1,0,0],"strokeColor":[0,0,0]}],["Path",{"applyMatrix":true,"selected":true,"strokeColor":[0,0,0]}],["Path",{"applyMatrix":true,"selected":true,"data":{"area_name":"标记-直线1","area_type":"线条"},"segments":[[[0,0],[0,0],[0,0],7],[[50,50],[0,0],[0,0],7],[[30,90],[0,0],[0,0],7]],"strokeColor":[1,0,0],"strokeWidth":8}],["Path",{"applyMatrix":true,"selected":true,"data":{"area_name":"标记-线条1","area_type":"线条"},"segments":[[[24,124],[0,0],[0,0],7],[[124,124],[0,0],[0,0],7],[[224,124],[0,0],[0,0],7]],"strokeColor":[0,1,0],"strokeWidth":8}],["Raster",{"applyMatrix":false,"matrix":[1,0,0,1,24,124],"data":{"area_name":"图标1","area_type":"图像"},"crossOrigin":"","source":"http://localhost:3000/Camera.png"}],["Raster",{"applyMatrix":false,"matrix":[1,0,0,1,124,124],"data":{"area_name":"图标2","area_type":"图像"},"crossOrigin":"","source":"http://localhost:3000/Camera.png"}],["Raster",{"applyMatrix":false,"matrix":[1,0,0,1,224,124],"data":{"area_name":"图标3","area_type":"图像"},"crossOrigin":"","source":"http://localhost:3000/Camera.png"}],["Path",{"applyMatrix":true,"selected":true,"strokeColor":[0,0,0]}],["PointText",{"applyMatrix":false,"matrix":[1,0,0,1,50,50],"data":{"area_name":"标记-文字1","area_type":"文字"},"content":"你好，我是测试文字","strokeColor":[0,0,1],"fontFamily":"Arial","fontSize":20,"leading":24}]]}]]
-svgPainter2.EXP_importJSON(JSON.stringify(json))
-svgPainter2.EXP_areaEvent('click', (event, path) => {
-  console.log('我的自定义函数Click：' + path.area_name, event)
-})
+// const json = [
+//   [
+//     "Layer",
+//     {
+//       "applyMatrix": true,
+//       "children": [
+//         [
+//           "Raster",
+//           {
+//             "applyMatrix": false,
+//             "matrix": [1, 0, 0, 1, 400, 300],
+//             "crossOrigin": "",
+//             "source": "https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg"
+//           }
+//         ]
+//       ]
+//     }
+//   ],
+//   [
+//     "Layer",
+//     {
+//       "applyMatrix": true,
+//       "children": [
+//         [
+//           "Raster",
+//           {
+//             "applyMatrix": false,
+//             "matrix": [1, 0, 0, 1, 400, 300],
+//             "crossOrigin": "",
+//             "source": "https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg"
+//           }
+//         ],
+//         [
+//           "Path",
+//           {
+//             "applyMatrix": true,
+//             "data": {
+//               "area_name": "区域-头部1730108849400",
+//               "area_type": "自定义"
+//             },
+//             "segments": [
+//               [
+//                 [223, 144],
+//                 [15.68028, -26.65742],
+//                 [-15.68028, 26.65742]
+//               ],
+//               [
+//                 [244, 168],
+//                 [-32.19856, -4.74242],
+//                 [32.19856, 4.74242]
+//               ],
+//               [
+//                 [352, 163],
+//                 [-15.88602, 26.62711],
+//                 [15.88602, -26.62711]
+//               ],
+//               [
+//                 [307, 61],
+//                 [32.74264, 5.23397],
+//                 [-32.74264, -5.23397]
+//               ]
+//             ],
+//             "closed": true,
+//             "fillColor": [0.8, 0.66667, 0.73333, 0.53333],
+//             "strokeColor": [0, 0, 0]
+//           }
+//         ],
+//         ["Path", { "applyMatrix": true, "strokeColor": [0, 0, 0] }],
+//         [
+//           "Raster",
+//           {
+//             "applyMatrix": false,
+//             "matrix": [1, 0, 0, 1, 479, 120],
+//             "data": { "area_name": "图标1730108980451", "area_type": "图像" },
+//             "crossOrigin": "",
+//             "source": "http://localhost:2900/img/camara.svg"
+//           }
+//         ]
+//       ]
+//     }
+//   ]
+// ]
+//
+// svgPainter2.EXP_importJSON(JSON.stringify(json))
+// svgPainter2.EXP_areaEvent('click', (event, path) => {
+//   console.log('我的自定义函数Click：' + path.area_name, event)
+// })

@@ -93,7 +93,7 @@ const area = svgPainter.EXP_findAreaByName('区域-头部')
 
 ### 导出JSON结果 - 推荐
 ```js
-svgPainter.exportJSON(exported_json)
+svgPainter.EXP_exportJSON()
 或者
 svgPainter.svgConfig.scope.activate() // 需要先激活scope，否则多个会出现冲突
 svgPainter.svgConfig.scope.paper.project.exportJSON()
@@ -101,7 +101,7 @@ svgPainter.svgConfig.scope.paper.project.exportJSON()
 
 ### 导入JSON结果 - 推荐
 ```js
-svgPainter.importJSON(exported_json)
+svgPainter.EXP_importJSON(exported_json)
 或者
 svgPainter.svgConfig.scope.activate() // 需要先激活scope，否则多个会出现冲突
 svgPainter.svgConfig.scope.paper.project.importJSON(exported_json) // 但是这种方法会丢失函数触发
@@ -150,3 +150,11 @@ svgPainter.EXP_areaEvent('mousemove', (event, path) => {
   console.log('我的自定义函数Leave：' + path.area_name, event)
 })
 ```
+
+## 其他说明
+### 图层优先级
+【图片 = 文字】 > 【画线|直线|曲线】 > 【手绘区域】 > 【背景图】
+
+### 事件触发
+点击顶层元素，不会穿透到下一层
+其次不存在事件层级关系，只有绘制元素的层级关系，所以也不存在时间冒泡等

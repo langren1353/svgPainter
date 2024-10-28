@@ -37,14 +37,13 @@ export default function() {
 
     // 主要调用这个
     save() {
-
       if (this.index < this.pointsStack.length - 1) {
         this.pointsStack = this.pointsStack.slice(0, this.index + 1)
       }
       if (this.pointsStack.length >= 20) {
         this.pointsStack.shift()
       }
-      const curJSON = scope.project.exportJSON()
+      const curJSON = EXP_exportJSON()
       const lastJSON = this.pointsStack[this.index]
       if (curJSON !== lastJSON) {
         console.log('调用了save')
@@ -68,8 +67,9 @@ export default function() {
       if (this.index > 0) {
         console.log('调用了undo')
         this.index--
+        scope.activate()
         scope.project.clear()
-        scope.project.importJSON(this.pointsStack[this.index])
+        EXP_importJSON(this.pointsStack[this.index])
         return this.pointsStack[this.index]
       }
       return null
@@ -80,8 +80,9 @@ export default function() {
         this.index++
 
       console.log('调用了redo')
+      scope.activate()
       scope.project.clear()
-      scope.project.importJSON(this.pointsStack[this.index])
+      EXP_importJSON(this.pointsStack[this.index])
       return this.pointsStack[this.index]
     }
   }
@@ -169,7 +170,8 @@ export default function() {
   }
 
   function EXP_areaGetAll() {
-    return scope.project.activeLayer.children.filter(item => item.area_type && item.area_type === AREA_TYPE)
+    // 返回所有具有area_type的属性，包括图片、包括自绘制
+    return scope.project.activeLayer.children.filter(item => item.area_type)
   }
 
   function EXP_deselectAll() {
@@ -208,14 +210,7 @@ export default function() {
   function EXP_importJSON(exported_json) {
     scope.activate()
     scope.project.importJSON(exported_json)
-    scope.project.activeLayer.children.forEach(item => {
-      if (!item.area_type) {
-        for(const name in item.data) {
-          item[name] = item.data[name]
-        }
-        bindPathEvent(item)
-      }
-    })
+    bindAreaPathEvent()
     EXP_deselectAll()
   }
   
@@ -282,6 +277,7 @@ export default function() {
       for(const name in raster.data) {
         raster[name] = raster.data[name]
       }
+      bindPathEvent(raster)
       raster.areaBind = () => {return 1}
       raster.position = new scope.Point(raster.size.width / 2 + x, raster.size.height / 2 + y)
       raster.bringToFront()
@@ -305,6 +301,7 @@ export default function() {
     for(const name in text.data) {
       text[name] = text.data[name]
     }
+    bindPathEvent(text)
     text.bringToFront();
     return text;
   }
@@ -323,6 +320,7 @@ export default function() {
     for(const name in path.data) {
       path[name] = path.data[name]
     }
+    bindPathEvent(path)
     path.insertBelow(svgConfig.level_imageIcon);
     return path;
   }
@@ -351,12 +349,28 @@ export default function() {
         area_name: lineName,
         area_type: AREA_TYPE_LINE,
       }
+      bindPathEvent(path)
       for(const name in path.data) {
         path[name] = path.data[name]
       }
       path.insertBelow(svgConfig.level_imageIcon);
       return path
     }
+  }
+  
+  function bindAreaPathEvent() {
+    scope.project.activeLayer.children.forEach(item => {
+      if (!item.area_type) {
+        for(const name in item.data) {
+          item[name] = item.data[name]
+        }
+        
+        // 如果是应该有事件的地方，那么绑定事件，否则就是不应该有事件的地方：例如背景图
+        if (item.area_type) {
+          bindPathEvent(item)
+        }
+      }
+    })
   }
   
   function bindPathEvent(path) {

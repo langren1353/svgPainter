@@ -16,7 +16,12 @@ export default function() {
     scope,
     canvasSelector: '#myCanvas',
     tool: new scope.Tool(),
-    drawEnable: false,
+    drawEnable: false, // 是否绘制模式：用于修改已绘制的元素
+    dragMoveBgEnable: false, // 是否可以拖拽背景，缩放大背景
+    dragMoveOptions: {
+      minScale: 1, // 最小缩放比例
+      maxScale: 3, // 最大缩放比例
+    },
     history: null,
     hitOptions: {
       segments: true,
@@ -238,6 +243,8 @@ export default function() {
       } else {
         raster.remove()
       }
+      
+      raster.scale(scope.view.bounds.width/ raster.width, scope.view.bounds.height/raster.height)
       
       raster.position = scope.view.center;
       raster.insertBelow(scope.project.activeLayer);
@@ -500,22 +507,136 @@ export default function() {
     }
     return promise
   }
+  
+  function EXP_enableDragMoveBg() {
+    svgConfig.dragMoveBgEnable = true
+  }
+  
+  function EXP_disableDragMoveBg() {
+    svgConfig.dragMoveBgEnable = true
+  }
+  
+  // 初始化拖动、移动背景功能
+  function bindDragMove(canvasTarget) {
+    // 初始化变量
+    let scale = 1; // 当前缩放比例
+    let offsetX = 0; // X轴偏移量
+    let offsetY = 0; // Y轴偏移量
+    let isDragging = false; // 是否正在拖动
+    let lastX, lastY, firstX, firstY; // 上一次鼠标的位置
+    let endPos = new scope.Point(scope.view.bounds.width / 2, scope.view.bounds.height / 2);
+
+    // 监听滚轮事件
+    canvasTarget.addEventListener('wheel', function(event) {
+      if(!svgConfig.dragMoveBgEnable) return
+      
+      // 获取鼠标在视图中的位置
+      const mousePos = scope.view.viewToProject(new scope.Point(event.clientX, event.clientY));
+
+      if (event.deltaY < 0) { // 滚轮向上滚动
+        scale = Math.min(scale * 1.1, svgConfig.dragMoveOptions.maxScale);
+      } else { // 滚轮向下滚动
+        scale = Math.max(scale / 1.1, svgConfig.dragMoveOptions.minScale);
+      }
+
+      // 计算新的中心点
+      const oldCenter = scope.view.center;
+      const newCenter = oldCenter.add(mousePos.subtract(oldCenter).multiply(1 - 1 / scale));
+
+      // 更新视图缩放和中心点
+      scope.view.zoom = scale;
+      scope.view.center = newCenter;
+
+      // 阻止默认行为
+      event.preventDefault();
+    }, { passive: false });
+
+    // 当缩放恢复到1时，重置偏移量
+    canvasTarget.addEventListener('wheel', function(event) {
+      if(!svgConfig.dragMoveBgEnable) return
+      if (scale === svgConfig.dragMoveOptions.minScale) {
+        offsetX = 0;
+        offsetY = 0;
+        scope.view.center = new scope.Point(
+          (scope.view.bounds.width / 2),
+          (scope.view.bounds.height / 2)
+        );
+      }
+    });
+
+    // 监听鼠标按下事件
+    canvasTarget.addEventListener('mousedown', function(event) {
+      if(!svgConfig.dragMoveBgEnable) return
+      if (scale > svgConfig.dragMoveOptions.minScale) {
+        isDragging = true;
+        firstX = event.clientX;
+        firstY = event.clientY;
+      }
+    });
+
+    // 监听鼠标移动事件
+    canvasTarget.addEventListener('mousemove', function(event) {
+      if(!svgConfig.dragMoveBgEnable) return
+      if (isDragging && scale > svgConfig.dragMoveOptions.minScale) {
+        offsetX = (firstX - event.clientX) / scale;
+        offsetY = (firstY - event.clientY) / scale;
+
+        // 边界检查
+        const viewBounds = scope.view.bounds;
+        const contentBounds = scope.project.activeLayer.bounds;
+
+        // 计算新的中心点
+        let newCenterX = endPos.x + offsetX;
+        let newCenterY = endPos.y + offsetY;
+
+        // 边界检查
+        if (newCenterX - viewBounds.width / 2 < contentBounds.x) {
+          newCenterX = contentBounds.x + viewBounds.width / 2;
+        } else if (newCenterX + viewBounds.width / 2 > contentBounds.x + contentBounds.width) {
+          newCenterX = contentBounds.x + contentBounds.width - viewBounds.width / 2;
+        }
+
+        if (newCenterY - viewBounds.height / 2 < contentBounds.y) {
+          newCenterY = contentBounds.y + viewBounds.height / 2;
+        } else if (newCenterY + viewBounds.height / 2 > contentBounds.y + contentBounds.height) {
+          newCenterY = contentBounds.y + contentBounds.height - viewBounds.height / 2;
+        }
+
+        // 更新视图中心点
+        scope.view.center = new scope.Point(newCenterX, newCenterY);
+
+        lastX = event.clientX;
+        lastY = event.clientY;
+      }
+    });
+
+    canvasTarget.addEventListener('mouseup', function() {
+      if(!svgConfig.dragMoveBgEnable) return
+      isDragging = false;
+      endPos.x = scope.view.center.x;
+      endPos.y = scope.view.center.y;
+    });
+  }
 
   function init(myConfig  = {}) {
     svgConfig = Object.assign(svgConfig, myConfig)
-    scope.setup(document.querySelector(svgConfig.canvasSelector))
+    const canvas = document.querySelector(svgConfig.canvasSelector)
+    scope.setup(canvas)
     svgConfig.tool.on('mousedown', onMouseDown)
     svgConfig.tool.on('mousedrag', onMouseDrag)
     svgConfig.tool.on('mouseup', onMouseUp)
     svgConfig.tool.on('keydown', onKeyDown)
 
     svgConfig.history = new HistoryStack()
+    bindDragMove(canvas)
   }
-  
+
+
   return {
     svgConfig,
     svgPainter: this,
     EXP_init: init,
+    bindPathEvent,
     EXP_areaEvent,
     EXP_areaGetAll,
     EXP_drawLine,
@@ -523,6 +644,9 @@ export default function() {
     EXP_startDraw,
     EXP_drawImage,
     EXP_drawText,
+
+    EXP_enableDragMoveBg,
+    EXP_disableDragMoveBg,
     EXP_exportJSON,
     EXP_exportAllSVG,
     EXP_exportAreaSVG,

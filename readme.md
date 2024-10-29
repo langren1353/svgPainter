@@ -6,11 +6,16 @@
 ## 使用方法
 ### 初始化
 在HTML模版中添加SVG元素依赖
+> 说明：需要有一个区域用于canvas的绘制
+> 
+> 如果需要绘制多个区域，可以添加多个canvas
+
 ```html
 <canvas id="myCanvas" width="800" height="600"></canvas>
 ```
 
 ### 配置SVG使用元素
+
 ```js
 import svgInit from 'svg-painter';
 const svgPainter = svgInit()
@@ -18,10 +23,16 @@ const svgPainter = svgInit()
 svgPainter.EXP_init({
   canvasSelector: '#myCanvas', // svg的选择器，默认为 #myCanvas
   drawEnable: false, // 启用绘制，默认为false
+  dragMoveBgEnable: false, // 是否可以拖拽背景，缩放大背景：注意：这个和拖动绘制会产生冲突，拖拽结束后记得关
+  dragMoveOptions: {
+    minScale: 1, // 最小缩放比例
+    maxScale: 3, // 最大缩放比例
+  }
 })
 ```
 
 ### 设置背景图
+> 说明：背景图加载的尺寸会是直接铺面目标canvas，自动大小缩放，所以尽量贴合比例
 ```js
 svgPainter.EXP_loadBackground('cat.jpg', async (img) => {
   console.log('背景图加载完成')
@@ -29,13 +40,16 @@ svgPainter.EXP_loadBackground('cat.jpg', async (img) => {
 ```
 
 ### 添加普通图片区域
+> 说明：绘制普通图片区域，绘制之后的图片可以拖拽更换位置；支持事件
 ```js
   svgPainter.EXP_drawImage(imgPath, positionX, positionY, imgName)
   svgPainter.EXP_drawImage('./Camera.png', 100, 100, '图标2')
 ```
 
 ### 绘制线条
-path属性参照：[http://paperjs.org/reference/path/#strokecolor](http://paperjs.org/reference/path/#strokecolor)
+> 说明：绘制普通线条；支持事件。线条有一些基本属性，具体参考官网地址
+> 
+> path属性参照：[http://paperjs.org/reference/path/#strokecolor](http://paperjs.org/reference/path/#strokecolor)
 ```js
 const path = svgPainter1.EXP_drawLine([{x: 0, y: 0}, {x: 50, y: 50}, {x: 30, y: 90}], '标记-直线1', {
   strokeColor: '#ff0000',
@@ -50,6 +64,7 @@ path.opacity = 0.5 // 透明度
 ```
 
 ### 添加区域线条绘制 - 贝塞尔曲线
+> 说明：尝试用线条去拟合已有的区域，形成画线效果；支持事件
 ```js
 svgPainter1.EXP_drawAreaLine([areaName1, areaName2, areaName3], lineName)
 const path2 = svgPainter1.EXP_drawAreaLine(['图标1', '图标2', '图标3'], '标记-线条1', {
@@ -61,6 +76,7 @@ path2.fillColor = '#ff0000' // 填充颜色
 ```
 
 ### 添加文字标记
+> 说明：添加普通文字绘制；支持事件
 ```js
 const path3 = svgPainter1.EXP_drawText('你好，我是测试文字', 50, 50, '标记-文字1', {
   strokeColor: '#0000ff',
@@ -73,6 +89,28 @@ const path3 = svgPainter1.EXP_drawText('你好，我是测试文字', 50, 50, '�
 ```js
 const area1 = svgPainter.EXP_startDraw(areaName, fillColor = randomColor)
 const area2 = svgPainter.EXP_startDraw('区域-头部', '#ccaabb88')
+```
+
+### 特殊绘制功能
+> 说明：绘制区域，绘制完成之后用户可以自己调整边界；支持事件
+> 用于绘制一些目前不支持的元素，例如Rectangle、Path.Circle等
+```js
+// 主体对象在：svgPainter.svgConfig.scope上
+svgPainter.svgConfig.scope.activate()
+const rect = svgPainter.svgConfig.scope.Rectangle([0, 0], [25, 25])
+rect.center = view.center // 绘制在正中间
+
+// 自定义数据的绑定
+rect.data = {
+  area_name: '区域的名字', // 区域名会用于查询
+  area_type: '自己取一个类名-用来给自己看的',
+}
+// 自定义数据进一步绑定
+for(const name in rect.data) {
+  rect[name] = rect.data[name]
+}
+// 事件绑定，否则无法触发事件
+svgPainter.bindPathEvent(rect)
 ```
 
 ### 修改区域填充颜色
@@ -91,10 +129,19 @@ svgPainter.EXP_areaGetAll()
 const area = svgPainter.EXP_findAreaByName('区域-头部')
 ```
 
+### 调整绘制区域为可缩放、可拖拽 - 使用鼠标滚轮缩放(1-3倍)，之后就可以随意拖拽
+> 注意：启用可以拖拽之后会和绘制功能有冲突，因为肯定会争抢鼠标，所以拖拽结束后，需要禁用拖拽功能
+```js
+// 启用缩放、拖拽
+svgPainter.EXP_enableDragMoveBg()
+// 禁用缩放、拖拽
+svgPainter.EXP_disableDragMoveBg()
+```
+
 ### 导出JSON结果 - 推荐
 ```js
 svgPainter.EXP_exportJSON()
-或者
+// 或者
 svgPainter.svgConfig.scope.activate() // 需要先激活scope，否则多个会出现冲突
 svgPainter.svgConfig.scope.paper.project.exportJSON()
 ```
@@ -102,12 +149,14 @@ svgPainter.svgConfig.scope.paper.project.exportJSON()
 ### 导入JSON结果 - 推荐
 ```js
 svgPainter.EXP_importJSON(exported_json)
-或者
+// 或者下面方法（注意有缺陷）
 svgPainter.svgConfig.scope.activate() // 需要先激活scope，否则多个会出现冲突
 svgPainter.svgConfig.scope.paper.project.importJSON(exported_json) // 但是这种方法会丢失函数触发
 ```
 
 ### 导出完整SVG
+> 建议使用JSON方案，SVG方案需要图片支持跨域
+
 ```js
 svgPainter.EXP_exportAllSVG()
 ```

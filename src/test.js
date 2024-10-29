@@ -70,6 +70,8 @@ svgPainter1.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/x
   const path3 = svgPainter1.EXP_drawText('你好，我是测试文字', 50, 50, '标记-文字1', {
     strokeColor: '#0000ff',
   })
+  
+  svgPainter1.EXP_enableDragMoveBg()
 
   // 导出，并绘制到另一个元素上
   // const json = svgPainter1.svgConfig.scope.project.exportJSON()

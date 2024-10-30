@@ -200,6 +200,22 @@ svgPainter.EXP_areaEvent('mousemove', (event, path) => {
 })
 ```
 
+### 区域拖拽事件
+> 注意：缩放比例为1的时候，不会有拖拽事件触发（因为肯定拖不动）
+```js
+// 这个函数可以用于html元素不跟随，此时，可以用回调来销毁html元素
+svgPainter.EXP_areaEvent('dragmove', (event) => {
+  console.log('我的自定义函数dragmove：', event)
+})
+```
+### 区域缩放事件
+```js
+// 这个函数可以用于html元素不跟随，此时，可以用回调来销毁html元素
+svgPainter.EXP_areaEvent('wheel', (event) => {
+  console.log('我的自定义函数wheel：', event)
+})
+```
+
 ## 其他说明
 ### 图层优先级
 【图片 = 文字】 > 【画线|直线|曲线】 > 【手绘区域】 > 【背景图】
@@ -207,3 +223,7 @@ svgPainter.EXP_areaEvent('mousemove', (event, path) => {
 ### 事件触发
 点击顶层元素，不会穿透到下一层
 其次不存在事件层级关系，只有绘制元素的层级关系，所以也不存在时间冒泡等
+
+### 缩放说明
+缩放参数：svgPainter.svgConfig.curDrawScale = 当前缩放比例 get|set
+缩放中心：svgPainter.svgConfig.curDrawScaleCenter = 当前缩放中心点 get|set

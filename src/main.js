@@ -18,10 +18,12 @@ export default function() {
     tool: new scope.Tool(),
     drawEnable: false, // 是否绘制模式：用于修改已绘制的元素
     dragMoveBgEnable: false, // 是否可以拖拽背景，缩放大背景
-    dragMoveOptions: {
+    dragMoveOptions: {    
       minScale: 1, // 最小缩放比例
       maxScale: 3, // 最大缩放比例
     },
+    curDrawScale: 1, // 当前缩放比例
+    curDrawCenter: null,
     history: null,
     hitOptions: {
       segments: true,
@@ -392,33 +394,25 @@ export default function() {
       })
 
       function pathMouseClickEvent(event) {
-        for (const item of svgConfig.areaWatch) {
-          if (item.watchEvent === 'click') {
-            item.callback(event, newPath)
-          }
-        }
+        svgConfig.areaWatch.filter(one => one.watchEvent === 'click').map(item => {
+          item.callback(event, newPath)
+        })
       }
 
       function pathMouseHoverEvent(event) {
-        for (const item of svgConfig.areaWatch) {
-          if (item.watchEvent === 'mouseenter') {
-            item.callback(event, newPath)
-          }
-        }
+        svgConfig.areaWatch.filter(one => one.watchEvent === 'mouseenter').map(item => {
+          item.callback(event, newPath)
+        })
       }
       function pathMouseOutEvent(event) {
-        for (const item of svgConfig.areaWatch) {
-          if (item.watchEvent === 'mouseleave') {
-            item.callback(event, newPath)
-          }
-        }
+        svgConfig.areaWatch.filter(one => one.watchEvent === 'mouseleave').map(item => {
+          item.callback(event, newPath)
+        })
       }
       function pathMouseMoveEvent(event) {
-        for (const item of svgConfig.areaWatch) {
-          if (item.watchEvent === 'mousemove') {
-            item.callback(event, newPath)
-          }
-        }
+        svgConfig.areaWatch.filter(one => one.watchEvent === 'mousemove').map(item => {
+          item.callback(event, newPath)
+        })
       }
     })(path)
   }
@@ -513,18 +507,18 @@ export default function() {
   }
   
   function EXP_disableDragMoveBg() {
-    svgConfig.dragMoveBgEnable = true
+    svgConfig.dragMoveBgEnable = false
   }
   
   // 初始化拖动、移动背景功能
   function bindDragMove(canvasTarget) {
+    svgConfig.curDrawCenter = scope.view.center
+    
     // 初始化变量
-    let scale = 1; // 当前缩放比例
     let offsetX = 0; // X轴偏移量
     let offsetY = 0; // Y轴偏移量
     let isDragging = false; // 是否正在拖动
     let lastX, lastY, firstX, firstY; // 上一次鼠标的位置
-    let endPos = new scope.Point(scope.view.bounds.width / 2, scope.view.bounds.height / 2);
 
     // 监听滚轮事件
     canvasTarget.addEventListener('wheel', function(event) {
@@ -534,17 +528,17 @@ export default function() {
       const mousePos = scope.view.viewToProject(new scope.Point(event.clientX, event.clientY));
 
       if (event.deltaY < 0) { // 滚轮向上滚动
-        scale = Math.min(scale * 1.1, svgConfig.dragMoveOptions.maxScale);
+        svgConfig.curDrawScale = Math.min(svgConfig.curDrawScale * 1.1, svgConfig.dragMoveOptions.maxScale);
       } else { // 滚轮向下滚动
-        scale = Math.max(scale / 1.1, svgConfig.dragMoveOptions.minScale);
+        svgConfig.curDrawScale = Math.max(svgConfig.curDrawScale / 1.1, svgConfig.dragMoveOptions.minScale);
       }
 
       // 计算新的中心点
       const oldCenter = scope.view.center;
-      const newCenter = oldCenter.add(mousePos.subtract(oldCenter).multiply(1 - 1 / scale));
+      const newCenter = oldCenter.add(mousePos.subtract(oldCenter).multiply(1 - 1 / svgConfig.curDrawScale));
 
       // 更新视图缩放和中心点
-      scope.view.zoom = scale;
+      scope.view.zoom = svgConfig.curDrawScale;
       scope.view.center = newCenter;
 
       // 阻止默认行为
@@ -554,7 +548,10 @@ export default function() {
     // 当缩放恢复到1时，重置偏移量
     canvasTarget.addEventListener('wheel', function(event) {
       if(!svgConfig.dragMoveBgEnable) return
-      if (scale === svgConfig.dragMoveOptions.minScale) {
+      svgConfig.areaWatch.filter(one => one.watchEvent === 'wheel').map(item => {
+        item.callback(event)
+      })
+      if (svgConfig.curDrawScale === svgConfig.dragMoveOptions.minScale) {
         offsetX = 0;
         offsetY = 0;
         scope.view.center = new scope.Point(
@@ -567,7 +564,7 @@ export default function() {
     // 监听鼠标按下事件
     canvasTarget.addEventListener('mousedown', function(event) {
       if(!svgConfig.dragMoveBgEnable) return
-      if (scale > svgConfig.dragMoveOptions.minScale) {
+      if (svgConfig.curDrawScale > svgConfig.dragMoveOptions.minScale) {
         isDragging = true;
         firstX = event.clientX;
         firstY = event.clientY;
@@ -577,17 +574,22 @@ export default function() {
     // 监听鼠标移动事件
     canvasTarget.addEventListener('mousemove', function(event) {
       if(!svgConfig.dragMoveBgEnable) return
-      if (isDragging && scale > svgConfig.dragMoveOptions.minScale) {
-        offsetX = (firstX - event.clientX) / scale;
-        offsetY = (firstY - event.clientY) / scale;
+      if(isDragging) {
+        svgConfig.areaWatch.filter(one => one.watchEvent === 'dragmove').map(item => {
+          item.callback(event)
+        })
+      }
+      if (isDragging && svgConfig.curDrawScale > svgConfig.dragMoveOptions.minScale) {
+        offsetX = (firstX - event.clientX) / svgConfig.curDrawScale;
+        offsetY = (firstY - event.clientY) / svgConfig.curDrawScale;
 
         // 边界检查
         const viewBounds = scope.view.bounds;
         const contentBounds = scope.project.activeLayer.bounds;
 
         // 计算新的中心点
-        let newCenterX = endPos.x + offsetX;
-        let newCenterY = endPos.y + offsetY;
+        let newCenterX = svgConfig.curDrawCenter.x + offsetX;
+        let newCenterY = svgConfig.curDrawCenter.y + offsetY;
 
         // 边界检查
         if (newCenterX - viewBounds.width / 2 < contentBounds.x) {
@@ -613,8 +615,8 @@ export default function() {
     canvasTarget.addEventListener('mouseup', function() {
       if(!svgConfig.dragMoveBgEnable) return
       isDragging = false;
-      endPos.x = scope.view.center.x;
-      endPos.y = scope.view.center.y;
+      svgConfig.curDrawCenter.x = scope.view.center.x;
+      svgConfig.curDrawCenter.y = scope.view.center.y;
     });
   }
 

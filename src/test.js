@@ -45,6 +45,16 @@ svgPainter1.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/x
     console.log('我的自定义函数Leave：'+path.area_name, event)
   })
 
+  // 自定义事件4
+  svgPainter1.EXP_areaEvent('dragmove', (event) => {
+    console.log('我的自定义函数dragmove：', event)
+  })
+
+  // 自定义事件5
+  svgPainter1.EXP_areaEvent('wheel', (event) => {
+    console.log('我的自定义函数wheel：', event)
+  })
+
   // 获取所有区域
   console.log(svgPainter1.EXP_areaGetAll())
   // 导出JSON数据

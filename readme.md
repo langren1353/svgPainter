@@ -94,6 +94,7 @@ const area2 = svgPainter.EXP_startDraw('区域-头部', '#ccaabb88')
 ### 特殊绘制功能
 > 说明：绘制区域，绘制完成之后用户可以自己调整边界；支持事件
 > 用于绘制一些目前不支持的元素，例如Rectangle、Path.Circle等
+
 ```js
 // 主体对象在：svgPainter.svgConfig.scope上
 svgPainter.svgConfig.scope.activate()
@@ -106,7 +107,7 @@ rect.data = {
   area_type: '自己取一个类名-用来给自己看的',
 }
 // 事件绑定，否则无法触发事件
-svgPainter.EXP_addCustomShape(rect, svgPainter.svgConfig.TYPE.AREA_TYPE_CUSTOM)
+svgPainter.EXP_addCustomShape(rect, svgPainter.svgConfig.LAYER_TYPE.AREA_TYPE_CUSTOM)
 ```
 
 ### 修改区域填充颜色
@@ -216,7 +217,12 @@ svgPainter.EXP_areaEvent('wheel', (event) => {
 
 ## 其他说明
 ### 图层优先级
-【图片 = 文字】 > 【画线|直线|曲线】 > 【手绘区域】 > 【背景图】
+【文字】> 【图片】 =  > 【画线|直线|曲线】 > 【手绘区域】 > 【背景图】
+
+```js
+// 可以强制获取到目标图层
+svgPainter.EXP_getLayer(svgPainter.svgConfig.LAYER_TYPE.AREA_TYPE_CUSTOM)
+```
 
 ### 事件触发
 点击顶层元素，不会穿透到下一层

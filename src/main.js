@@ -34,7 +34,7 @@ export default function() {
       tolerance: 5
     },
     areaWatch: [],
-    TYPE: {
+    LAYER_TYPE: {
       AREA_TYPE_BG,
       AREA_TYPE,
       AREA_TYPE_CUSTOM,
@@ -112,6 +112,11 @@ export default function() {
 
     activeShape = hitResult.item;
     console.log('点击了：' + (activeShape.area_name || hitResult.type))
+
+    if(activeShape) {
+      EXP_deselectAll()
+      activeShape.selected = true;
+    }
     
     // 绘制的模式时，才可以修改
     if(!svgConfig.drawEnable) return;
@@ -124,10 +129,7 @@ export default function() {
     }
     
     if (hitResult.type === 'pixel') { // 跳过图片处理
-      if(activeShape.area_type) {
-        scope.project.activeLayer.selected = false;
-        hitResult.item.selected = true;
-      } else {
+      if(!activeShape.area_type) {
         choosePoint = null;
         activeShape = null;
       }
@@ -139,8 +141,6 @@ export default function() {
       activeShape.smooth();
       svgConfig.history.save()
     } else if (hitResult.type === 'fill') { // 填充的图像
-      scope.project.deselectAll()
-      hitResult.item.selected = true;
     }
   }
 
@@ -164,9 +164,6 @@ export default function() {
    */
   function EXP_addCustomShape(item, type) {
     addToLayer(type, item)
-    for(const name in item.data) {
-      item[name] = item.data[name]
-    }
     bindPathEvent(item)
     return item
   }
@@ -199,13 +196,13 @@ export default function() {
     })
   }
 
-  // TODO 带修读
   function EXP_areaGetAll() {
-    const layers = svgConfig.scope.project.layers
-    
-    const nam = [].concat(...layers.map(item => item.children || [])).filter(item => item.area_type)
-    debugger
-    return nam
+    const result = [];
+
+    svgConfig.scope.project.layers.map(layer => {
+      result.push(...layer.children)
+    })
+    return result
   }
 
   function EXP_deselectAll() {
@@ -282,12 +279,18 @@ export default function() {
         layers[i].remove()
       }
     }
+    
     combineLayer(AREA_TYPE_BG)
     combineLayer(AREA_TYPE)
     combineLayer(AREA_TYPE_CUSTOM)
     combineLayer(AREA_TYPE_LINE)
     combineLayer(AREA_TYPE_IMG)
     combineLayer(AREA_TYPE_TEXT)
+    
+    // 只保留一个最后的唯一的一个背景图，其他的背景图都删掉
+    while(getLayer(AREA_TYPE_BG).children.length > 1) {
+      getLayer(AREA_TYPE_BG).children[0].remove()
+    }
   }
   
   function EXP_importSVG(svgString) {
@@ -313,9 +316,12 @@ export default function() {
     image.src = imgUrl;
     image.onload = () => {
       const raster = new scope.Raster(image);
-
+      raster.data = {
+        area_name: '【唯一背景图】',
+        area_type: AREA_TYPE_BG,
+      }
+      bindPathEvent(raster)
       getLayer(AREA_TYPE_BG).removeChildren() // 删除所有背景图
-      
       addToLayer(AREA_TYPE_BG, raster)
       console.log(getLayer(AREA_TYPE_BG))
       raster.scale(scope.view.bounds.width/ raster.width, scope.view.bounds.height/raster.height)
@@ -387,9 +393,6 @@ export default function() {
         area_type: AREA_TYPE_IMG,
       }
       addToLayer(AREA_TYPE_IMG, raster)
-      for(const name in raster.data) {
-        raster[name] = raster.data[name]
-      }
       bindPathEvent(raster)
       raster.areaBind = () => {return 1}
       raster.position = new scope.Point(raster.size.width / 2 + x, raster.size.height / 2 + y)
@@ -420,9 +423,6 @@ export default function() {
       area_type: AREA_TYPE_TEXT,
     }
     addToLayer(AREA_TYPE_TEXT, text)
-    for(const name in text.data) {
-      text[name] = text.data[name]
-    }
     bindPathEvent(text)
     return text;
   }
@@ -446,9 +446,6 @@ export default function() {
       area_type: AREA_TYPE_LINE,
     }
     addToLayer(AREA_TYPE_LINE, path)
-    for(const name in path.data) {
-      path[name] = path.data[name]
-    }
     bindPathEvent(path)
     return path;
   }
@@ -486,9 +483,6 @@ export default function() {
       }
       addToLayer(AREA_TYPE_LINE, path)
       bindPathEvent(path)
-      for(const name in path.data) {
-        path[name] = path.data[name]
-      }
       return path
     }
   }
@@ -497,17 +491,10 @@ export default function() {
    * 对于所有元素，绑定事件
    */
   function bindAllAreaPathEvent() {
-    console.log(EXP_areaGetAll())
     EXP_areaGetAll().forEach(item => {
-      if (!item.area_type) {
-        for(const name in item.data) {
-          item[name] = item.data[name]
-        }
-        // 如果是应该有事件的地方，那么绑定事件，否则就是不应该有事件的地方：例如背景图
-        if (item.area_type && !item.hasBindEvent) {
-          item.hasBindEvent = true
-          bindPathEvent(item)
-        }
+      if (!item.area_type && !item.hasBindEvent) {
+        item.hasBindEvent = true
+        bindPathEvent(item)
       }
     })
   }
@@ -517,6 +504,10 @@ export default function() {
    * @param path 目标区域
    */
   function bindPathEvent(path) {
+    for(const name in path.data) {
+      path[name] = path.data[name]
+    }
+    if(!path.area_type) return // 并非自定义的元素
     ~(function(newPath){
       // 绑定path事件
       newPath.on('click', pathMouseClickEvent)
@@ -621,9 +612,6 @@ export default function() {
           area_type: AREA_TYPE,
         }
         addToLayer(AREA_TYPE, path)
-        for(const name in path.data) {
-          path[name] = path.data[name]
-        }
         path.areaBind = () => {return 1}
 
         var lightness = (Math.random() - 0.5) * 0.4 + 0.4;
@@ -652,7 +640,6 @@ export default function() {
   
   // 初始化拖动、移动背景功能
   function bindDragMove(canvasTarget) {
-    svgConfig.curDrawCenter = scope.view.center
     
     // 初始化变量
     let offsetX = 0; // X轴偏移量
@@ -704,6 +691,8 @@ export default function() {
     // 监听鼠标按下事件
     canvasTarget.addEventListener('mousedown', function(event) {
       if(!svgConfig.dragMoveBgEnable) return
+      svgConfig.curDrawCenter = scope.view.center
+      
       if (svgConfig.curDrawScale > svgConfig.dragMoveOptions.minScale) {
         isDragging = true;
         firstX = event.clientX;
@@ -725,7 +714,7 @@ export default function() {
 
         // 边界检查
         const viewBounds = scope.view.bounds;
-        const contentBounds = scope.project.activeLayer.bounds;
+        const contentBounds = getLayer(AREA_TYPE_BG).bounds;
 
         // 计算新的中心点
         let newCenterX = svgConfig.curDrawCenter.x + offsetX;
@@ -826,6 +815,7 @@ export default function() {
     EXP_changeAreaFillColor,
     EXP_findAreaByName,
     EXP_deleteAreaByName,
-    EXP_deselectAll
+    EXP_deselectAll,
+    EXP_getLayer: getLayer,
   }
 }

@@ -6,7 +6,9 @@
 import paper from 'paper/dist/paper-core';
 
 export default function() {
-  const AREA_TYPE = '自定义';
+  const AREA_TYPE_BG = '背景图';
+  const AREA_TYPE = '绘制区';
+  const AREA_TYPE_CUSTOM = '自定义';
   const AREA_TYPE_IMG = '图像';
   const AREA_TYPE_LINE = '线条';
   const AREA_TYPE_TEXT = '文字';
@@ -32,8 +34,14 @@ export default function() {
       tolerance: 5
     },
     areaWatch: [],
-    level_background: null,
-    level_imageIcon: null,
+    TYPE: {
+      AREA_TYPE_BG,
+      AREA_TYPE,
+      AREA_TYPE_CUSTOM,
+      AREA_TYPE_IMG,
+      AREA_TYPE_LINE,
+      AREA_TYPE_TEXT
+    }
   }
 
   class HistoryStack {
@@ -53,7 +61,7 @@ export default function() {
       const curJSON = EXP_exportJSON()
       const lastJSON = this.pointsStack[this.index]
       if (curJSON !== lastJSON) {
-        console.log('调用了save')
+        // console.log('调用了save')
         this.push(curJSON)
       }
     }
@@ -131,7 +139,7 @@ export default function() {
       activeShape.smooth();
       svgConfig.history.save()
     } else if (hitResult.type === 'fill') { // 填充的图像
-      scope.project.activeLayer.selected = false;
+      scope.project.deselectAll()
       hitResult.item.selected = true;
     }
   }
@@ -146,6 +154,21 @@ export default function() {
     } else if (activeShape) { // 移动路径
       activeShape.position = activeShape.position.add(event.delta);
     }
+  }
+
+  /**
+   * 
+   * @param item 形状，例如path
+   * @param type 分类，例如：svgPainter.svgConfig.TYPE.AREA_TYPE_CUSTOM
+   * @returns {*}
+   */
+  function EXP_addCustomShape(item, type) {
+    addToLayer(type, item)
+    for(const name in item.data) {
+      item[name] = item.data[name]
+    }
+    bindPathEvent(item)
+    return item
   }
 
   function onMouseUp(event) {
@@ -176,17 +199,26 @@ export default function() {
     })
   }
 
+  // TODO 带修读
   function EXP_areaGetAll() {
-    // 返回所有具有area_type的属性，包括图片、包括自绘制
-    return scope.project.activeLayer.children.filter(item => item.area_type)
+    const layers = svgConfig.scope.project.layers
+    
+    const nam = [].concat(...layers.map(item => item.children || [])).filter(item => item.area_type)
+    debugger
+    return nam
   }
 
   function EXP_deselectAll() {
     scope.activate()
     scope.project.activeLayer.selected = false;
+    scope.project.deselectAll()
   }
 
-  // 导出多项为SVG
+  /**
+   * 
+   * @param area_names 区域名称
+   * @returns {string} 指定的这些区域集合的SVG字符串
+   */
   function EXP_exportAreaSVG(area_names) {
     const exportGroup = new scope.Group();
     for (var name in area_names) {
@@ -202,23 +234,60 @@ export default function() {
     const blob = new Blob([svgString], { type: 'image/svg+xml' });
     return URL.createObjectURL(blob);
   }
-  
+
+  /**
+   * 
+   * @returns {string} 返回整个项目的JSON内容
+   */
   function EXP_exportJSON() {
     return scope.project.exportJSON()
   }
 
-  // 导出为 SVG 字符串
+  /**
+   * 
+   * @returns {string} 返回整个项目的SVG内容，一般建议用JSON
+   */
   function EXP_exportAllSVG() {
     const svgString = project.exportSVG({ asString: true });
     const blob = new Blob([svgString], { type: 'image/svg+xml' });
     return URL.createObjectURL(blob);
   }
 
+  /**
+   * 导入原本之前导出的项目JSON
+   * @param exported_json JSON格式的字符串
+   */
   function EXP_importJSON(exported_json) {
     scope.activate()
     scope.project.importJSON(exported_json)
-    bindAreaPathEvent()
+    combineLayers()
+    bindAllAreaPathEvent()
     EXP_deselectAll()
+  }
+
+  /**
+   * 拼合所有的layer，只保持固定的几个layer层，其他的合并
+   */
+  function combineLayers() {
+    function combineLayer(layerName) {
+      const layers = scope.project.layers.filter(item => item.name === layerName)
+      const toLayer = layers[0]
+      for(let i = 1; i < layers.length; i++) {
+        const nowLayer = layers[i]
+        do{
+          toLayer.addChild(nowLayer.children[0])
+        }while (nowLayer.children.length > 0)
+      }
+      for(let i = 1; i < layers.length; i++) {
+        layers[i].remove()
+      }
+    }
+    combineLayer(AREA_TYPE_BG)
+    combineLayer(AREA_TYPE)
+    combineLayer(AREA_TYPE_CUSTOM)
+    combineLayer(AREA_TYPE_LINE)
+    combineLayer(AREA_TYPE_IMG)
+    combineLayer(AREA_TYPE_TEXT)
   }
   
   function EXP_importSVG(svgString) {
@@ -233,31 +302,60 @@ export default function() {
     });
   }
 
-  function EXP_loadBackground(imgUrl, callBack = ()=> {}) {
+  /**
+   * 加载背景图，重复加载背景图，将进行替换效果
+   * @param imgUrl 图片地址
+   * @param callBack 加载完成后的回调
+   */
+  function EXP_loadBackground(imgUrl, callBack = (image)=> {}) {
     scope.activate()
     const image = new Image();
     image.src = imgUrl;
     image.onload = () => {
       const raster = new scope.Raster(image);
 
-      if(!svgConfig.level_background) {
-        svgConfig.level_background = raster
-      } else {
-        raster.remove()
-      }
+      getLayer(AREA_TYPE_BG).removeChildren() // 删除所有背景图
       
+      addToLayer(AREA_TYPE_BG, raster)
+      console.log(getLayer(AREA_TYPE_BG))
       raster.scale(scope.view.bounds.width/ raster.width, scope.view.bounds.height/raster.height)
       
       raster.position = scope.view.center;
-      raster.insertBelow(scope.project.activeLayer);
-      callBack(image);
+      callBack(image, raster);
     }
   }
 
+  /**
+   * 根据区域名称返回查找区域
+   * @param areaName 区域名称
+   * @returns {*} 目标区域 | null
+   */
   function EXP_findAreaByName(areaName) {
-    return scope.project.activeLayer.children.find(item => item.area_name === areaName)
+    return EXP_areaGetAll().find(item => item.area_name === areaName)
+  }
+
+  /**
+   * 根据区域名称删除区域
+   * @param areaName 区域名称
+   * @returns {boolean} 删除结果True|False
+   */
+  function EXP_deleteAreaByName(areaName) {
+    scope.activate()
+    const area = EXP_findAreaByName(areaName)
+    if (area){
+      area.remove()
+      return true
+    } else {
+      return false;
+    }
   }
   
+  /**
+   * 改变区域填充颜色
+   * @param area_name 区域名称
+   * @param toColor 颜色
+   * @returns {*} 目标区域
+   */
   function EXP_changeAreaFillColor(area_name, toColor) {
     scope.activate()
     const area = EXP_findAreaByName(area_name)
@@ -269,31 +367,45 @@ export default function() {
     return area
   }
 
-  function EXP_drawImage(imgUrl, x = 50, y = 50, area_name, callBack = () => {}) {
+  /**
+   * 绘制图片
+   * @param imgUrl 图片地址，本地 或者 远程地址都可以
+   * @param x x坐标
+   * @param y y坐标
+   * @param area_name 区域名称
+   * @param callBack 加载完成后的回调
+   */
+  function EXP_drawImage(imgUrl, x = 50, y = 50, area_name, callBack = (image) => {}) {
     scope.activate()
     const image = new Image();
     image.src = imgUrl;
     image.onload = () => {
       const raster = new scope.Raster(image);
-      if(!svgConfig.level_imageIcon) {
-        svgConfig.level_imageIcon = raster
-      }
       raster.position = scope.view.center;
       raster.data = {
         area_name: area_name,
         area_type: AREA_TYPE_IMG,
       }
+      addToLayer(AREA_TYPE_IMG, raster)
       for(const name in raster.data) {
         raster[name] = raster.data[name]
       }
       bindPathEvent(raster)
       raster.areaBind = () => {return 1}
       raster.position = new scope.Point(raster.size.width / 2 + x, raster.size.height / 2 + y)
-      raster.bringToFront()
       callBack(image);
     }
   }
   
+  /**
+   * 绘制文本
+   * @param textStr 文本内容
+   * @param x x坐标
+   * @param y y坐标
+   * @param textName 文本名称
+   * @param other_options 其他选项
+   * @returns {*} 文本对象
+   */
   function EXP_drawText(textStr, x = 50, y = 50, textName, other_options = {}) {
     scope.activate()
     var text = new paper.PointText(Object.assign({
@@ -307,14 +419,21 @@ export default function() {
       area_name: textName,
       area_type: AREA_TYPE_TEXT,
     }
+    addToLayer(AREA_TYPE_TEXT, text)
     for(const name in text.data) {
       text[name] = text.data[name]
     }
     bindPathEvent(text)
-    text.bringToFront();
     return text;
   }
   
+  /**
+   * 绘制线条
+   * @param points 线条坐标点
+   * @param lineName 线条名称
+   * @param other_options 其他选项
+   * @returns {*} 线条对象
+   */
   function EXP_drawLine(points = [], lineName = '线条-未命名', other_options = {}) {
     scope.activate()
     const path = new scope.Path(Object.assign({
@@ -326,14 +445,21 @@ export default function() {
       area_name: lineName,
       area_type: AREA_TYPE_LINE,
     }
+    addToLayer(AREA_TYPE_LINE, path)
     for(const name in path.data) {
       path[name] = path.data[name]
     }
     bindPathEvent(path)
-    path.insertBelow(svgConfig.level_imageIcon);
     return path;
   }
   
+  /**
+   * 区域线条绘制
+   * @param areaNames 区域名称['A', 'B', 'C']
+   * @param lineName 绘制的线条的名称
+   * @param other_options 其他选项
+   * @returns {*} 区域对象
+   */
   function EXP_drawAreaLine(areaNames, lineName = '线条-未命名', other_options = {}) {
     scope.activate()
     const areas = areaNames.map(item => {
@@ -358,30 +484,38 @@ export default function() {
         area_name: lineName,
         area_type: AREA_TYPE_LINE,
       }
+      addToLayer(AREA_TYPE_LINE, path)
       bindPathEvent(path)
       for(const name in path.data) {
         path[name] = path.data[name]
       }
-      path.insertBelow(svgConfig.level_imageIcon);
       return path
     }
   }
-  
-  function bindAreaPathEvent() {
-    scope.project.activeLayer.children.forEach(item => {
+
+  /**
+   * 对于所有元素，绑定事件
+   */
+  function bindAllAreaPathEvent() {
+    console.log(EXP_areaGetAll())
+    EXP_areaGetAll().forEach(item => {
       if (!item.area_type) {
         for(const name in item.data) {
           item[name] = item.data[name]
         }
-        
         // 如果是应该有事件的地方，那么绑定事件，否则就是不应该有事件的地方：例如背景图
-        if (item.area_type) {
+        if (item.area_type && !item.hasBindEvent) {
+          item.hasBindEvent = true
           bindPathEvent(item)
         }
       }
     })
   }
   
+  /**
+   * 绑定目标区域的事件触发
+   * @param path 目标区域
+   */
   function bindPathEvent(path) {
     ~(function(newPath){
       // 绑定path事件
@@ -417,7 +551,13 @@ export default function() {
     })(path)
   }
 
-  // 绘制，返回Promise，resolve为路径
+  /**
+   * 开始绘制区域
+   * @param area_name 区域名称
+   * @param fillColor 填充颜色
+   * @param other_options 其他选项
+   * @returns {Promise<unknown>}
+   */
   function EXP_startDraw(area_name = '区域-未命名', fillColor = undefined, other_options) {
     scope.activate()
     var path = new scope.Path({
@@ -457,7 +597,6 @@ export default function() {
           strokeColor: 'black',
           fullySelected: true
         }, other_options));
-        path.insertAbove(svgConfig.level_background);
       }
     }
 
@@ -481,6 +620,7 @@ export default function() {
           area_name: area_name,
           area_type: AREA_TYPE,
         }
+        addToLayer(AREA_TYPE, path)
         for(const name in path.data) {
           path[name] = path.data[name]
         }
@@ -619,6 +759,20 @@ export default function() {
       svgConfig.curDrawCenter.y = scope.view.center.y;
     });
   }
+  
+  function getLayer(findName) {
+    return scope.project.layers.find(one => one.name === findName)
+  }
+  
+  function addToLayer(findName, item) {
+    try{
+      getLayer(findName).addChild(item)
+      svgConfig.areaList.push(item)
+      return true
+    } catch (e) {
+      return false
+    }
+  }
 
   function init(myConfig  = {}) {
     svgConfig = Object.assign(svgConfig, myConfig)
@@ -629,8 +783,21 @@ export default function() {
     svgConfig.tool.on('mouseup', onMouseUp)
     svgConfig.tool.on('keydown', onKeyDown)
 
+    createLayer(AREA_TYPE_BG)
+    createLayer(AREA_TYPE)
+    createLayer(AREA_TYPE_CUSTOM)
+    createLayer(AREA_TYPE_LINE)
+    createLayer(AREA_TYPE_IMG)
+    createLayer(AREA_TYPE_TEXT)
+    
     svgConfig.history = new HistoryStack()
     bindDragMove(canvas)
+
+    function createLayer(layerName) {
+      const layer = new scope.Layer()
+      layer.name = layerName
+      scope.project.addLayer(layer)
+    }
   }
 
 
@@ -654,9 +821,11 @@ export default function() {
     EXP_exportAreaSVG,
     EXP_importJSON,
     EXP_importSVG,
+    EXP_addCustomShape,
     EXP_loadBackground,
     EXP_changeAreaFillColor,
     EXP_findAreaByName,
+    EXP_deleteAreaByName,
     EXP_deselectAll
   }
 }

@@ -20,5 +20,10 @@
   "dependencies": {
     "paper": "^0.12.18",
     "vite": "^5.4.8"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "vue": "^3.5.12",
+    "element-plus": "^2.8.7"
   }
 }

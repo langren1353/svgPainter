@@ -6,13 +6,26 @@
     <title>Paper.js Drawing</title>
 </head>
 <body>
-    <canvas id="myCanvas1" width="800" height="600"></canvas>
-    <canvas id="myCanvas2" width="800" height="600"></canvas>
+
     
 <!--    主体功能函数-->
 <script type="module" src="./src/main.js"></script>
 <!--    测试函数，真实使用的函数-->
-<script type="module" src="./src/test.js"></script>
-
+    <div id="app">
+        <div style="display: flex">
+            <div>
+                <canvas id="myCanvas1" width="800" height="600"></canvas>
+            </div>
+            <div style="margin-left: 20px;">
+                <template v-for="item in areaList">
+                    <el-link  type="success" @click="activateArea(item.name)">{{ item.name }}</el-link>
+                    <BR>
+                </template>
+            </div>
+        </div>
+        <button @click="drawOne">绘制一个</button>
+        <el-switch v-model="drawEnable" @change="toggleDraw" />
+    </div>
+    <script type="module" src="./src/test.js"></script>
 </body>
 </html>

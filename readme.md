@@ -105,12 +105,8 @@ rect.data = {
   area_name: '区域的名字', // 区域名会用于查询
   area_type: '自己取一个类名-用来给自己看的',
 }
-// 自定义数据进一步绑定
-for(const name in rect.data) {
-  rect[name] = rect.data[name]
-}
 // 事件绑定，否则无法触发事件
-svgPainter.bindPathEvent(rect)
+svgPainter.EXP_addCustomShape(rect, svgPainter.svgConfig.TYPE.AREA_TYPE_CUSTOM)
 ```
 
 ### 修改区域填充颜色
@@ -129,6 +125,11 @@ svgPainter.EXP_areaGetAll()
 const area = svgPainter.EXP_findAreaByName('区域-头部')
 ```
 
+### 删除单个区域（包括图片区域） - 一般用于调试用
+```js
+const area = svgPainter.EXP_deleteAreaByName('区域-头部')
+```
+
 ### 调整绘制区域为可缩放、可拖拽 - 使用鼠标滚轮缩放(1-3倍)，之后就可以随意拖拽
 > 注意：启用可以拖拽之后会和绘制功能有冲突，因为肯定会争抢鼠标，所以拖拽结束后，需要禁用拖拽功能
 ```js
@@ -138,20 +139,17 @@ svgPainter.EXP_enableDragMoveBg()
 svgPainter.EXP_disableDragMoveBg()
 ```
 
-### 导出JSON结果 - 推荐
+### 导出JSON结果
 ```js
 svgPainter.EXP_exportJSON()
-// 或者
-svgPainter.svgConfig.scope.activate() // 需要先激活scope，否则多个会出现冲突
-svgPainter.svgConfig.scope.paper.project.exportJSON()
 ```
 
-### 导入JSON结果 - 推荐
+### 导入JSON结果
 ```js
 svgPainter.EXP_importJSON(exported_json)
-// 或者下面方法（注意有缺陷）
-svgPainter.svgConfig.scope.activate() // 需要先激活scope，否则多个会出现冲突
-svgPainter.svgConfig.scope.paper.project.importJSON(exported_json) // 但是这种方法会丢失函数触发
+
+// 如果需要绘制的时候进行完整的覆盖导入，那么清空即可
+svgPainter.svgConfig.scope.project.clear()
 ```
 
 ### 导出完整SVG

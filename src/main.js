@@ -316,6 +316,7 @@ export default function() {
     image.src = imgUrl;
     image.onload = () => {
       const raster = new scope.Raster(image);
+      raster.locked = true // 锁定背景图，不让拖动
       raster.data = {
         area_name: '【唯一背景图】',
         area_type: AREA_TYPE_BG,
@@ -396,7 +397,7 @@ export default function() {
       bindPathEvent(raster)
       raster.areaBind = () => {return 1}
       raster.position = new scope.Point(raster.size.width / 2 + x, raster.size.height / 2 + y)
-      callBack(image);
+      callBack(image, raster);
     }
   }
   

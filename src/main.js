@@ -13,6 +13,7 @@ export default function() {
   const AREA_TYPE_LINE = '线条';
   const AREA_TYPE_TEXT = '文字';
   const scope = new paper.PaperScope()
+  let isInitialized  = false
   
   let svgConfig = {
     scope,
@@ -261,6 +262,14 @@ export default function() {
     bindAllAreaPathEvent()
     EXP_deselectAll()
   }
+  
+  function EXP_clearAll() {
+    scope.activate()
+    scope.project.clear()
+    EXP_resetDefaultScale()
+    createLayers()
+    
+  }
 
   /**
    * 拼合所有的layer，只保持固定的几个layer层，其他的合并
@@ -306,15 +315,32 @@ export default function() {
   }
 
   /**
+   * 恢复画布的默认缩放
+   */
+  function EXP_resetDefaultScale() {
+    scope.view.zoom = 1
+    scope.view.center = new scope.Point(
+      (scope.view.bounds.width / 2),
+      (scope.view.bounds.height / 2)
+    )
+  }
+
+  /**
    * 加载背景图，重复加载背景图，将进行替换效果
    * @param imgUrl 图片地址
    * @param callBack 加载完成后的回调
    */
   function EXP_loadBackground(imgUrl, callBack = (image)=> {}) {
+    EXP_resetDefaultScale()
+    
     scope.activate()
     const image = new Image();
     image.src = imgUrl;
     image.onload = () => {
+      try{
+        getLayer(AREA_TYPE_BG).removeChildren() // 删除所有背景图
+      }catch (e){}
+      
       const raster = new scope.Raster(image);
       raster.locked = true // 锁定背景图，不让拖动
       raster.data = {
@@ -322,12 +348,10 @@ export default function() {
         area_type: AREA_TYPE_BG,
       }
       bindPathEvent(raster)
-      getLayer(AREA_TYPE_BG).removeChildren() // 删除所有背景图
       addToLayer(AREA_TYPE_BG, raster)
-      console.log(getLayer(AREA_TYPE_BG))
-      raster.scale(scope.view.bounds.width/ raster.width, scope.view.bounds.height/raster.height)
+      raster.scale(scope.view.bounds.width / raster.width, scope.view.bounds.height / raster.height)
+      raster.position = scope.view.center
       
-      raster.position = scope.view.center;
       callBack(image, raster);
     }
   }
@@ -763,8 +787,11 @@ export default function() {
       return false
     }
   }
-
+  
   function init(myConfig  = {}) {
+    if(isInitialized) {
+      throw new Error('只允许初始化一次，因为涉及了多个事件绑定和初始化')
+    }
     svgConfig = Object.assign(svgConfig, myConfig)
     const canvas = document.querySelector(svgConfig.canvasSelector)
     scope.setup(canvas)
@@ -773,23 +800,27 @@ export default function() {
     svgConfig.tool.on('mouseup', onMouseUp)
     svgConfig.tool.on('keydown', onKeyDown)
 
+    createLayers()
+    
+    svgConfig.history = new HistoryStack()
+    bindDragMove(canvas)
+    isInitialized = true
+  }
+  
+  function createLayers() {
     createLayer(AREA_TYPE_BG)
     createLayer(AREA_TYPE)
     createLayer(AREA_TYPE_CUSTOM)
     createLayer(AREA_TYPE_LINE)
     createLayer(AREA_TYPE_IMG)
     createLayer(AREA_TYPE_TEXT)
-    
-    svgConfig.history = new HistoryStack()
-    bindDragMove(canvas)
-
-    function createLayer(layerName) {
-      const layer = new scope.Layer()
-      layer.name = layerName
-      scope.project.addLayer(layer)
-    }
   }
-
+  
+  function createLayer(layerName) {
+    const layer = new scope.Layer()
+    layer.name = layerName
+    scope.project.addLayer(layer)
+  }
 
   return {
     svgConfig,
@@ -810,6 +841,8 @@ export default function() {
     EXP_exportAllSVG,
     EXP_exportAreaSVG,
     EXP_importJSON,
+    EXP_resetDefaultScale,
+    EXP_clearAll,
     EXP_importSVG,
     EXP_addCustomShape,
     EXP_loadBackground,

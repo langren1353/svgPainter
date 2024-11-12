@@ -44,11 +44,13 @@ const app = createApp({
         canvasSelector: '#myCanvas1',
         drawEnable: false, // 是否允许修改
       })
-      svgPainter1.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async function() {
+      svgPainter1.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async function(image, raster) {
         // 添加图片绘制区域
         svgPainter1.EXP_drawImage('./Camera.png', 0, 100, '图标1')
         svgPainter1.EXP_drawImage('./Camera.png', 100, 100, '图标2')
-        svgPainter1.EXP_drawImage('./Camera.png', 200, 100, '图标3')
+        svgPainter1.EXP_drawImage('./Camera.png', 200, 100, '图标3', (image, raster) => {
+          raster.source = './cat.jpg'
+        })
       })
     }
 

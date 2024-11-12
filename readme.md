@@ -20,6 +20,7 @@
 import svgInit from 'svg-painter';
 const svgPainter = svgInit()
 
+// 该方法只能初始化一次，禁止初始化第二遍
 svgPainter.EXP_init({
   canvasSelector: '#myCanvas', // svg的选择器，默认为 #myCanvas
   drawEnable: false, // 启用绘制，默认为false
@@ -29,6 +30,9 @@ svgPainter.EXP_init({
     maxScale: 3, // 最大缩放比例
   }
 })
+
+// 需要恢复默认可以：清空、重置状态
+EXP_clearAll = 清空 + 重置缩放
 ```
 
 ### 设置背景图
@@ -140,6 +144,12 @@ svgPainter.EXP_enableDragMoveBg()
 svgPainter.EXP_disableDragMoveBg()
 ```
 
+### 重置缩放
+```js
+// 重置为默认1倍缩放
+svgPainter.EXP_resetDefaultScale() 
+```
+
 ### 导出JSON结果
 ```js
 svgPainter.EXP_exportJSON()
@@ -163,6 +173,11 @@ svgPainter.EXP_exportAllSVG()
 ### 导出部分SVG
 ```js
 svgPainter.EXP_exportAreaSVG(area_names = ['区域-头部', '区域-身体'])
+```
+
+### 清空画板
+```js
+svgPainter.EXP_clearAll() // 清空并重置缩放
 ```
 
 ## 事件触发

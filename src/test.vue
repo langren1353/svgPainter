@@ -3,6 +3,7 @@
   <button size="small" @click="drawCamera">绘制图标</button>
   <button size="small" @click="loadJson">加载JSON</button>
   <button size="small" @click="exportJson">导出JSON</button>
+  <button size="small" @click="reinit">绘制背景图</button>
   <!-- <button size="small" @click="getAllArea">打印区域信息</button> -->
   <div id="svg-container" style="margin-left: 100px">
     <canvas id="myCanvas" width="800" height="600"></canvas>
@@ -31,7 +32,7 @@ export default {
   mounted() {
     setTimeout(() => {
       this.init()
-    }, 2000)
+    }, 200)
   },
   methods: {
     switchCanDrag(v) {
@@ -44,13 +45,22 @@ export default {
     switchCanEdit(v) {
       svgPainter.svgConfig.drawEnable = v
     },
+    reinit() {
+      svgPainter.EXP_clearAll()
+      svgPainter.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async function(image, raster) {
+        // 添加图片绘制区域
+        svgPainter.EXP_drawImage('./Camera.png', 0, 100, '图标1')
+        svgPainter.EXP_drawImage('./Camera.png', 100, 100, '图标2')
+        svgPainter.EXP_drawImage('./Camera.png', 200, 100, '图标3')
+      })
+    },
     async init(p) {
       console.log(svgPainter)
       // let {src, width, height} = p
       svgPainter.EXP_init({
         canvasSelector: '#myCanvas', // svg的选择器，默认为 #myCanvas
-        drawEnable: false, // 启用绘制，默认为false,
-        dragMoveBgEnable: this.draggable, // 是否可以拖拽背景，缩放大背景：注意：这个和拖动绘制会产生冲突，拖拽结束后记得关
+        // drawEnable: false, // 启用绘制，默认为false,
+        // dragMoveBgEnable: this.draggable, // 是否可以拖拽背景，缩放大背景：注意：这个和拖动绘制会产生冲突，拖拽结束后记得关
         // dragMoveOptions: {
         //   minScale: 1, // 最小缩放比例
         //   maxScale: 1.5 // 最大缩放比例
@@ -64,17 +74,22 @@ export default {
       //   // console.log('Canvas被点击了！', event)
       //   self.cvsClick(event)
       // })
-      svgPainter.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async (img) => {
-        console.log('背景图加载完成')
-        console.log(img)
-
-        // this.loadJson()
-
-        // const area2 = svgPainter.EXP_startDraw('区域-头部', '#ccaabb88')
-        // let allArea = svgPainter.EXP_areaGetAll()
-        // console.log(allArea)
-        // let json = svgPainter.svgConfig.scope.paper.project.exportJSON()
-        // console.log(json)
+      // svgPainter.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async (img, raster) => {
+      //   raster.source = './cat.jpg'
+      //  
+      //   // this.loadJson()
+      //
+      //   // const area2 = svgPainter.EXP_startDraw('区域-头部', '#ccaabb88')
+      //   // let allArea = svgPainter.EXP_areaGetAll()
+      //   // console.log(allArea)
+      //   // let json = svgPainter.svgConfig.scope.paper.project.exportJSON()
+      //   // console.log(json)
+      // })
+      svgPainter.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async function(image, raster) {
+        // 添加图片绘制区域
+        svgPainter.EXP_drawImage('./Camera.png', 0, 100, '图标1')
+        svgPainter.EXP_drawImage('./Camera.png', 100, 100, '图标2')
+        svgPainter.EXP_drawImage('./Camera.png', 200, 100, '图标3')
       })
     },
     startDraw() {

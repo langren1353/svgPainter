@@ -48,6 +48,9 @@ svgPainter.EXP_loadBackground('cat.jpg', async (img) => {
 ```js
   svgPainter.EXP_drawImage(imgPath, positionX, positionY, imgName)
   svgPainter.EXP_drawImage('./Camera.png', 100, 100, '图标2')
+
+  svgPainter.EXP_drawImage2(imgPath, positionX, positionY, width, height, imgName)
+  svgPainter.EXP_drawImage2('./Camera.png', 100, 100, 30, 30, '图标3')
 ```
 
 ### 绘制线条

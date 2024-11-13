@@ -430,7 +430,38 @@ export default function() {
       callBack(image, raster);
     }
   }
-  
+
+  /**
+   * 绘制图片
+   * @param imgUrl 图片地址，本地 或者 远程地址都可以
+   * @param x x坐标
+   * @param y y坐标
+   * @param width 显示的宽度
+   * @param height 显示的高度
+   * @param area_name 区域名称
+   * @param callBack 加载完成后的回调
+   */
+  function EXP_drawImage2(imgUrl, x = 50, y = 50, width = 30, height = 30, area_name, callBack = (image) => {}) {
+    scope.activate()
+    const image = new Image();
+    image.src = imgUrl;
+    image.onload = () => {
+      const raster = new scope.Raster(image);
+      raster.position = scope.view.center;
+      raster.data = {
+        area_name: area_name,
+        area_type: AREA_TYPE_IMG,
+      }
+      raster.size = new scope.Size(width, height)
+      addToLayer(AREA_TYPE_IMG, raster)
+      bindPathEvent(raster)
+      raster.areaBind = () => {return 1}
+      raster.position = new scope.Point(raster.size.width / 2 + x, raster.size.height / 2 + y)
+      callBack(image, raster);
+    }
+  }
+
+
   /**
    * 绘制文本
    * @param textStr 文本内容
@@ -839,6 +870,7 @@ export default function() {
     EXP_drawAreaLine,
     EXP_startDraw,
     EXP_drawImage,
+    EXP_drawImage2,
     EXP_drawText,
 
     EXP_enableDragMoveBg,

@@ -89,7 +89,7 @@ export default {
         // 添加图片绘制区域
         svgPainter.EXP_drawImage('./Camera.png', 0, 100, '图标1')
         svgPainter.EXP_drawImage('./Camera.png', 100, 100, '图标2')
-        svgPainter.EXP_drawImage('./Camera.png', 200, 100, '图标3')
+        svgPainter.EXP_drawImage2('./Camera.png', 200, 100, 500, 40, '图标3')
       })
       svgPainter.EXP_areaEvent('delete', (event, path) => {
         console.log('我的自定义函数=--删除', path, event)

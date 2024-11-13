@@ -176,6 +176,8 @@ export default function() {
   }
 
   function onKeyDown({ event }) {
+    if(!svgConfig.drawEnable) return;
+    
     if (event.ctrlKey && event.key === 'z') {
       svgConfig.history.undo()
     } else if (event.ctrlKey && event.key === 'y') {
@@ -186,6 +188,10 @@ export default function() {
       if (activeShape) {
         activeShape.remove();
         svgConfig.history.save()
+
+        svgConfig.areaWatch.filter(one => one.watchEvent === 'delete').map(item => {
+          item.callback(event, activeShape)
+        })
       }
     }
   }

@@ -193,6 +193,13 @@ svgPainter.EXP_areaEvent('click', (event, path) => {
 })
 ```
 
+### 区域删除
+```js
+svgPainter.EXP_areaEvent('delete', (event, path) => {
+  console.log('我的自定义函数delete：', event, path)
+})
+```
+
 ### 鼠标进入区域
 ```js
 svgPainter.EXP_areaEvent('mouseenter', (event, path) => {

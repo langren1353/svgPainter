@@ -91,6 +91,9 @@ export default {
         svgPainter.EXP_drawImage('./Camera.png', 100, 100, '图标2')
         svgPainter.EXP_drawImage('./Camera.png', 200, 100, '图标3')
       })
+      svgPainter.EXP_areaEvent('delete', (event, path) => {
+        console.log('我的自定义函数=--删除', path, event)
+      })
     },
     startDraw() {
       let name1 = new Date().getTime()

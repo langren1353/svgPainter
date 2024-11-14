@@ -94,6 +94,10 @@ export default {
       svgPainter.EXP_areaEvent('delete', (event, path) => {
         console.log('我的自定义函数=--删除', path, event)
       })
+      svgPainter.EXP_areaEvent('click', (event, path) => {
+        console.log('我的自定义函数Click：', path, event)
+        self.camaraPoint(event.point)
+      })
     },
     startDraw() {
       let name1 = new Date().getTime()

@@ -20,6 +20,7 @@ export default function() {
     canvasSelector: '#myCanvas',
     tool: new scope.Tool(),
     drawEnable: false, // 是否绘制模式：用于修改已绘制的元素
+    drawEnable: true, // 是否绘制模式：用于修改已绘制的元素
     dragMoveBgEnable: false, // 是否可以拖拽背景，缩放大背景
     dragMoveOptions: {    
       minScale: 1, // 最小缩放比例
@@ -130,7 +131,7 @@ export default function() {
     }
     
     if (hitResult.type === 'pixel') { // 跳过图片处理
-      if(!activeShape.area_type) {
+      if(!activeShape.area_type || activeShape.area_type === AREA_TYPE_BG) { // 跳过没有标记特定区域的 and 跳过是背景图的
         choosePoint = null;
         activeShape = null;
       }
@@ -348,7 +349,6 @@ export default function() {
       }catch (e){}
       
       const raster = new scope.Raster(image);
-      raster.locked = true // 锁定背景图，不让拖动
       raster.data = {
         area_name: '【唯一背景图】',
         area_type: AREA_TYPE_BG,

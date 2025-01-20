@@ -147,6 +147,13 @@ svgPainter.EXP_enableDragMoveBg()
 svgPainter.EXP_disableDragMoveBg()
 ```
 
+### 获取区域中心点
+```js
+// 根据area.bounds获取中心点，如果不存在，那么-1,-1
+const [pointX, pointY] = svgPainter.EXP_getAreaRectCenterPointByName('区域-头部')
+console.log(pointX, pointY)
+```
+
 ### 重置缩放
 ```js
 // 重置为默认1倍缩放

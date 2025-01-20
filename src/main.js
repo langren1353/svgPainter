@@ -273,9 +273,9 @@ export default function() {
   function EXP_clearAll() {
     scope.activate()
     scope.project.clear()
+    svgConfig.areaWatch = [] // 清空所有事件监听
     EXP_resetDefaultScale()
     createLayers()
-    
   }
 
   /**
@@ -858,6 +858,15 @@ export default function() {
     layer.name = layerName
     scope.project.addLayer(layer)
   }
+  
+  function EXP_getAreaRectCenterPointByName(areaName) {
+    const area = EXP_findAreaByName(areaName)
+    if(area) {
+      const point = area.bounds.topLeft.add(area.bounds.bottomRight).divide(2)
+      return [point.x, point.y]
+    }
+    return [-1, -1]
+  }
 
   return {
     svgConfig,
@@ -889,5 +898,6 @@ export default function() {
     EXP_deleteAreaByName,
     EXP_deselectAll,
     EXP_getLayer: getLayer,
+    EXP_getAreaRectCenterPointByName: EXP_getAreaRectCenterPointByName
   }
 }

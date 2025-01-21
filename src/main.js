@@ -609,9 +609,10 @@ export default function() {
    * @param area_name 区域名称
    * @param fillColor 填充颜色
    * @param other_options 其他选项
+   * @param path_options 路径参数
    * @returns {Promise<unknown>}
    */
-  function EXP_startDraw(area_name = '区域-未命名', fillColor = undefined, other_options) {
+  function EXP_startDraw(area_name = '区域-未命名', fillColor = undefined, other_options = {}) {
     scope.activate()
     var path = new scope.Path({
       strokeColor: 'black',
@@ -645,11 +646,20 @@ export default function() {
       }
 
       if (!selectedSegment) {
+        const attrOption = {}
+        for(const key in other_options){
+          if(typeof other_options[key] !== 'function'){
+            attrOption[key] = other_options[key]
+          }
+        }
+        
         path = new scope.Path(Object.assign({
           segments: [event.point],
           strokeColor: 'black',
-          fullySelected: true
-        }, other_options));
+          fullySelected: true,
+          closed: true,
+          smooth: true
+        }, attrOption));
       }
     }
 
@@ -664,18 +674,18 @@ export default function() {
 
     function mouseUp(event) {
       if (!selectedSegment) {
-
-        path.simplify(6);
-        path.fullySelected = true;
-        path.closed = true;
-        path.smooth();
+        for(const option in other_options) {
+          if(typeof other_options[option] === 'function') {
+            path[option](...other_options[option]())
+          }
+        }
         path.data = {
           area_name: area_name,
           area_type: AREA_TYPE,
         }
         addToLayer(AREA_TYPE, path)
         path.areaBind = () => {return 1}
-
+        
         var lightness = (Math.random() - 0.5) * 0.4 + 0.4;
         var hue = Math.random() * 360;
         path.fillColor = fillColor || { hue: hue, saturation: 1, lightness: lightness, alpha: 0.3 };

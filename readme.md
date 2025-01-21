@@ -93,9 +93,16 @@ const path3 = svgPainter1.EXP_drawText('你好，我是测试文字', 50, 50, '�
 ### 添加绘制区域 - 用户一次性绘制，绘制完成之后用户可以自己调整边界；
 > 单击边缘会添加一个节点
 > shift + 单击，会删除一个节点
+> other_options，参数不用都填写，只对需要修改的进行覆盖即可；如果是希望调用函数，那么需要改写成函数方式返回，返回值必须是数组
 ```js
-const area1 = svgPainter.EXP_startDraw(areaName, fillColor = randomColor)
-const area2 = svgPainter.EXP_startDraw('区域-头部', '#ccaabb88')
+const area1 = svgPainter.EXP_startDraw(areaName, fillColor = randomColor, other_options)
+const area2 = svgPainter.EXP_startDraw('区域-头部', '#ccaabb88', {
+  simplify: () => [2.5], // 点位自动缩减，level：0-9（default：6，官方推荐2.5），参考文档：http://paperjs.org/reference/path/#simplify
+  strokeColor: 'black', // 线条颜色
+  fullySelected: true, // 是否全选
+  closed: true, // 是否闭合
+  smooth: true // 是否平滑，否则为折现
+})
 ```
 
 ### 特殊绘制功能

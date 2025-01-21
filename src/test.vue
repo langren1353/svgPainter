@@ -101,7 +101,9 @@ export default {
     },
     startDraw() {
       let name1 = new Date().getTime()
-      const area2 = svgPainter.EXP_startDraw(`区域-头部${name1}`, '#ccaabb88')
+      const area2 = svgPainter.EXP_startDraw(`区域-头部${name1}`, '#ccaabb88', {
+        simplify: () => [0],
+      })
     },
     myFireFunc() {
       // const area = svgPainter.EXP_findAreaByName('区域-头部1731074118576')

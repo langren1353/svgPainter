@@ -99,11 +99,12 @@ export default {
         self.camaraPoint(event.point)
       })
     },
-    startDraw() {
+    async startDraw() {
       let name1 = new Date().getTime()
-      const area2 = svgPainter.EXP_startDraw(`区域-头部${name1}`, '#ccaabb88', {
-        simplify: () => [0],
+      const area2 = await svgPainter.EXP_startDraw(`区域-头部${name1}`, '#ccaabb88', {
+        simplify: () => [6],
       })
+      area2.smooth()
     },
     myFireFunc() {
       // const area = svgPainter.EXP_findAreaByName('区域-头部1731074118576')

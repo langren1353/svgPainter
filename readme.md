@@ -101,7 +101,6 @@ const area2 = svgPainter.EXP_startDraw('区域-头部', '#ccaabb88', {
   strokeColor: 'black', // 线条颜色
   fullySelected: true, // 是否全选
   closed: true, // 是否闭合
-  smooth: true // 是否平滑，否则为折现
 })
 ```
 

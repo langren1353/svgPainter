@@ -658,7 +658,6 @@ export default function() {
           strokeColor: 'black',
           fullySelected: true,
           closed: true,
-          smooth: true
         }, attrOption));
       }
     }

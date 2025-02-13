@@ -4,7 +4,7 @@
   <button size="small" @click="loadJson">加载JSON</button>
   <button size="small" @click="exportJson">导出JSON</button>
   <button size="small" @click="reinit">绘制背景图</button>
-   <button size="small" @click="myFireFunc">我的触发函数</button> 
+  <!-- <button size="small" @click="getAllArea">打印区域信息</button> -->
   <div id="svg-container" style="margin-left: 100px">
     <canvas id="myCanvas" width="800" height="600"></canvas>
   </div>
@@ -76,7 +76,7 @@ export default {
       // })
       // svgPainter.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async (img, raster) => {
       //   raster.source = './cat.jpg'
-      //  
+      //
       //   // this.loadJson()
       //
       //   // const area2 = svgPainter.EXP_startDraw('区域-头部', '#ccaabb88')
@@ -85,30 +85,28 @@ export default {
       //   // let json = svgPainter.svgConfig.scope.paper.project.exportJSON()
       //   // console.log(json)
       // })
-      svgPainter.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async function(image, raster) {
-        // 添加图片绘制区域
-        svgPainter.EXP_drawImage('./Camera.png', 0, 100, '图标1')
-        svgPainter.EXP_drawImage('./Camera.png', 100, 100, '图标2')
-        svgPainter.EXP_drawImage2('./Camera.png', 200, 100, 500, 40, '图标3')
-      })
-      svgPainter.EXP_areaEvent('delete', (event, path) => {
-        console.log('我的自定义函数=--删除', path, event)
-      })
-      svgPainter.EXP_areaEvent('click', (event, path) => {
-        console.log('我的自定义函数Click：', path, event)
-        self.camaraPoint(event.point)
-      })
+      // svgPainter.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async function(image, raster) {
+      //   // 添加图片绘制区域
+      //   svgPainter.EXP_drawImage('./Camera.png', 0, 100, '图标1')
+      //   svgPainter.EXP_drawImage('./Camera.png', 100, 100, '图标2')
+      //   svgPainter.EXP_drawImage2('./Camera.png', 200, 100, 500, 40, '图标3')
+      // })
+      // svgPainter.EXP_areaEvent('delete', (event, path) => {
+      //   console.log('我的自定义函数=--删除', path, event)
+      // })
+      // svgPainter.EXP_areaEvent('click', (event, path) => {
+      //   console.log('我的自定义函数Click：', path, event)
+      //   self.camaraPoint(event.point)
+      // })
+      svgPainter.EXP_startDrawArea(`区域-头部`)
     },
-    async startDraw() {
+    startDraw() {
       let name1 = new Date().getTime()
-      const area2 = await svgPainter.EXP_startDraw(`区域-头部${name1}`, '#ccaabb88', {
-        simplify: () => [6],
-      })
-      area2.smooth()
+      const area2 = svgPainter.EXP_startDraw(`区域-头部${name1}`, '#ccaabb88')
     },
-    myFireFunc() {
-      // const area = svgPainter.EXP_findAreaByName('区域-头部1731074118576')
-      console.log(svgPainter.EXP_getAreaRectCenterPointByName('区域-头部1731074118576'))
+    getAllArea() {
+      let allArea = svgPainter.EXP_areaGetAll()
+      console.log(allArea)
     },
     drawTxt() {
       const path3 = svgPainter.EXP_drawText('你好，我是测试文字', 0, 50, '标记-文字1', {
@@ -144,12 +142,12 @@ export default {
       // svgPainter.svgConfig.scope.activate() // 需要先激活scope，否则多个会出现冲突
       svgPainter.EXP_importJSON(JSON.stringify(this.json))
       // svgPainter.svgConfig.scope.paper.project.importJSON(JSON.stringify(this.json))
-      
+
       svgPainter.EXP_areaEvent('click', (event, path) => {
         console.log('我的自定义函数Click：' + path.area_name, event)
         self.camaraPoint(event.point)
       })
-      
+
       // svgPainter.EXP_areaEvent('mouseenter', (event, path) => {
       //   console.log('我的自定义函数Enter：' + path.area_name, event)
       // })

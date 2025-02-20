@@ -85,19 +85,19 @@ export default {
       //   // let json = svgPainter.svgConfig.scope.paper.project.exportJSON()
       //   // console.log(json)
       // })
-      // svgPainter.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async function(image, raster) {
-      //   // 添加图片绘制区域
-      //   svgPainter.EXP_drawImage('./Camera.png', 0, 100, '图标1')
-      //   svgPainter.EXP_drawImage('./Camera.png', 100, 100, '图标2')
-      //   svgPainter.EXP_drawImage2('./Camera.png', 200, 100, 500, 40, '图标3')
-      // })
-      // svgPainter.EXP_areaEvent('delete', (event, path) => {
-      //   console.log('我的自定义函数=--删除', path, event)
-      // })
-      // svgPainter.EXP_areaEvent('click', (event, path) => {
-      //   console.log('我的自定义函数Click：', path, event)
-      //   self.camaraPoint(event.point)
-      // })
+      svgPainter.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async function(image, raster) {
+        // 添加图片绘制区域
+        svgPainter.EXP_drawImage('./Camera.png', 0, 100, '图标1')
+        svgPainter.EXP_drawImage('./Camera.png', 100, 100, '图标2')
+        svgPainter.EXP_drawImage2('./Camera.png', 200, 100, 500, 40, '图标3')
+      })
+      svgPainter.EXP_areaEvent('delete', (event, path) => {
+        console.log('我的自定义函数=--删除', path, event)
+      })
+      svgPainter.EXP_areaEvent('click', (event, path) => {
+        console.log('我的自定义函数Click：', path, event)
+        self.camaraPoint(event.point)
+      })
       svgPainter.EXP_startDrawArea(`区域-头部`)
     },
     startDraw() {

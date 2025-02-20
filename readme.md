@@ -127,7 +127,10 @@ svgPainter.svgConfig.scope.activate()
 const rect = svgPainter.svgConfig.scope.Rectangle([0, 0], [25, 25])
 rect.center = view.center // 绘制在正中间
 
-// 自定义数据的绑定
+// 自定义数据的绑定，注意：
+// 1、自定义数据会暴露到上一层数据中，所以尽量不要放特殊数据，或者将自己的数据再包一层 rect.data.mydata={} 
+// 2、不要覆盖掉可能已有的数据，例如不要覆盖现有的area_name、area_type，代码需要这两个参数
+// 3、data中的数据会被JSON管理给导出出去，能顺利的用于导入导出，但是非data下的数据不一定可以
 rect.data = {
   area_name: '区域的名字', // 区域名会用于查询
   area_type: '自己取一个类名-用来给自己看的',

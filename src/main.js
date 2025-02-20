@@ -810,24 +810,21 @@ export default function() {
     canvasTarget.addEventListener('wheel', function(event) {
       if(!svgConfig.dragMoveBgEnable) return
 
-      // 获取鼠标在视图中的位置
-      const mousePos = scope.view.viewToProject(new scope.Point(event.clientX, event.clientY));
+      const mousePos = scope.view.viewToProject(new scope.Point(event.offsetX, event.offsetY));
 
       if (event.deltaY < 0) { // 滚轮向上滚动
-        svgConfig.curDrawScale = Math.min(svgConfig.curDrawScale * 1.1, svgConfig.dragMoveOptions.maxScale);
+        svgConfig.curDrawScale = 1.1
+        if(scope.view.zoom > svgConfig.dragMoveOptions.maxScale) {
+          return;
+        }
       } else { // 滚轮向下滚动
-        svgConfig.curDrawScale = Math.max(svgConfig.curDrawScale / 1.1, svgConfig.dragMoveOptions.minScale);
+        svgConfig.curDrawScale = 0.9
+
+        if(scope.view.zoom < svgConfig.dragMoveOptions.minScale) {
+          return;
+        }
       }
-
-      // 计算新的中心点
-      const oldCenter = scope.view.center;
-      const newCenter = oldCenter.add(mousePos.subtract(oldCenter).multiply(1 - 1 / svgConfig.curDrawScale));
-
-      // 更新视图缩放和中心点
-      scope.view.zoom = svgConfig.curDrawScale;
-      scope.view.center = newCenter;
-
-      // 阻止默认行为
+      scope.view.scale(svgConfig.curDrawScale, mousePos)
       event.preventDefault();
     }, { passive: false });
 

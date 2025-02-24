@@ -712,40 +712,60 @@ export default function() {
       resolve = __resolve
     });
 
+    svgConfig.tool.on('mousedown', mousedown)
     svgConfig.tool.on('mouseup', mouseUp)
     svgConfig.tool.on('mousemove', mouseMove)
     svgConfig.tool.on('keyup', keyUp)
 
-    function mouseUp(event) {
-      const curPoint = new scope.Point(event.point);
-      areaPath.add(curPoint);
-      _pathList.push(curPoint)
-
-      if(_pathList.length === 1) {
-        // 第一次的时候
-        const tmpP = new scope.Point(event.point);
-        areaPath.add(tmpP);
-        _pathList.push(tmpP)
-      }
-
-      // 如果点击靠近第一个点，闭合路径
-      if (_pathList.length > 2 && curPoint.getDistance(areaPath.segments[0].point) < 10) {
-        _pathList.length = 0
+    let lastClickTime = 0;
+    function mousedown(event) {
+      const now = Date.now();
+      const MaxTimeout = 200
+      // 双击的时候，也完成绘制
+      if (now - lastClickTime < MaxTimeout) {
         finish()
+        lastClickTime = 0;
+      } else {
+        lastClickTime = now;
+        setTimeout(() => { lastClickTime = 0; }, MaxTimeout);
       }
+    }
+    
+    function mouseUp(event) {
+      // 左键绘制，右键完成
+      if(event.event.button === 0) {
+        const curPoint = new scope.Point(event.point);
+        areaPath.add(curPoint);
+        _pathList.push(curPoint)
 
-      // 禁止出现曲线
-      for(const seg of areaPath.segments) {
-        const inP = seg['handleIn']
-        const outP = seg['handleOut']
-        if(inP) {
-          inP.x = 0
-          inP.y = 0
+        if(_pathList.length === 1) {
+          // 第一次的时候
+          const tmpP = new scope.Point(event.point);
+          areaPath.add(tmpP);
+          _pathList.push(tmpP)
         }
-        if(outP) {
-          outP.x = 0
-          outP.y = 0
+
+        // 如果点击靠近第一个点，闭合路径
+        if (_pathList.length > 2 && curPoint.getDistance(areaPath.segments[0].point) < 10) {
+          finish()
         }
+
+        // 禁止出现曲线
+        for(const seg of areaPath.segments) {
+          const inP = seg['handleIn']
+          const outP = seg['handleOut']
+          if(inP) {
+            inP.x = 0
+            inP.y = 0
+          }
+          if(outP) {
+            outP.x = 0
+            outP.y = 0
+          }
+        }
+      } else if(event.event.button === 2) {
+        // 结束绘制
+        finish()
       }
     }
 
@@ -764,6 +784,7 @@ export default function() {
     }
 
     function finish(){
+      _pathList.length = 0
       areaPath.fullySelected = true;
       areaPath.closed = true;
       areaPath.data = {
@@ -779,12 +800,13 @@ export default function() {
       areaPath.fillColor = fillColor || { hue: hue, saturation: 1, lightness: lightness, alpha: 0.3 };
 
       // 解除原绘制事件
+      svgConfig.tool.off('mousedown', mousedown)
       svgConfig.tool.off('mouseup', mouseUp)
       svgConfig.tool.off('mousemove', mouseMove)
+      svgConfig.tool.off('keyup', keyUp)
 
       bindPathEvent(areaPath)
       resolve(areaPath)
-
     }
     return promise
   }

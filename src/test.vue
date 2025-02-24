@@ -98,11 +98,11 @@ export default {
         console.log('我的自定义函数Click：', path, event)
         self.camaraPoint(event.point)
       })
-      svgPainter.EXP_startDrawArea(`区域-头部`)
     },
     startDraw() {
-      let name1 = new Date().getTime()
-      const area2 = svgPainter.EXP_startDraw(`区域-头部${name1}`, '#ccaabb88')
+      // let name1 = new Date().getTime()
+      // const area2 = svgPainter.EXP_startDraw(`区域-头部${name1}`, '#ccaabb88')
+      svgPainter.EXP_startDrawArea(`区域-头部2`)
     },
     getAllArea() {
       let allArea = svgPainter.EXP_areaGetAll()

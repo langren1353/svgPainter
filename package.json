@@ -1,6 +1,6 @@
 {
   "name": "svg-painter",
-  "version": "1.2.11",
+  "version": "1.2.12",
   "description": "based on paper.js",
   "main": "src/main.js",
   "type": "module",

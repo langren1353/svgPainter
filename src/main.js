@@ -19,7 +19,6 @@ export default function() {
     scope,
     canvasSelector: '#myCanvas',
     tool: new scope.Tool(),
-    drawEnable: false, // 是否绘制模式：用于修改已绘制的元素
     drawEnable: true, // 是否绘制模式：用于修改已绘制的元素
     dragMoveBgEnable: false, // 是否可以拖拽背景，缩放大背景
     dragMoveOptions: {
@@ -50,10 +49,19 @@ export default function() {
     constructor() {
       this.pointsStack = []
       this.index = -1
+      this.blocked = false
+    }
+    
+    lock() {
+      this.blocked = true
+    }
+    unlock() {
+      this.blocked = false
     }
 
     // 主要调用这个
     save() {
+      if(this.blocked) return 
       if (this.index < this.pointsStack.length - 1) {
         this.pointsStack = this.pointsStack.slice(0, this.index + 1)
       }
@@ -81,6 +89,8 @@ export default function() {
     }
 
     undo() {
+      if(this.blocked) return
+      
       if (this.index > 0) {
         console.log('调用了undo')
         this.index--
@@ -93,6 +103,8 @@ export default function() {
     }
 
     redo() {
+      if(this.blocked) return
+      
       if (this.index < this.pointsStack.length - 1)
         this.index++
 
@@ -697,6 +709,7 @@ export default function() {
    * @returns {Promise<unknown>}
    */
   function EXP_startDrawArea(area_name = '区域-未命名', fillColor = undefined, other_options) {
+    svgConfig.history.lock()
     scope.activate()
     var areaPath = new scope.Path(Object.assign({
       segments: [],
@@ -704,18 +717,19 @@ export default function() {
       fullySelected: true,
     }, other_options));
 
-    const _pathList = []
+    const deleteStack = []
 
     let resolve = null
+    let lastMousePos = new scope.Point(0, 0); 
 
     const promise = new Promise((__resolve) => {
       resolve = __resolve
     });
 
-    svgConfig.tool.on('mousedown', mousedown)
-    svgConfig.tool.on('mouseup', mouseUp)
-    svgConfig.tool.on('mousemove', mouseMove)
-    svgConfig.tool.on('keyup', keyUp)
+    svgConfig.tool.on('mousedown', mousedown) // 检查双击
+    svgConfig.tool.on('mouseup', mouseUp) // 按下添加点
+    svgConfig.tool.on('mousemove', mouseMove) // 动态点位置变化
+    svgConfig.tool.on('keydown', keyDown) // 按键撤销、ESC取消
 
     let lastClickTime = 0;
     function mousedown(event) {
@@ -735,56 +749,74 @@ export default function() {
       // 左键绘制，右键完成
       if(event.event.button === 0) {
         const curPoint = new scope.Point(event.point);
+        // 第一次的时候添加两个点
+        if(areaPath.segments.length === 0) {
+          areaPath.add(curPoint);
+        }
+
         areaPath.add(curPoint);
-        _pathList.push(curPoint)
-
-        if(_pathList.length === 1) {
-          // 第一次的时候
-          const tmpP = new scope.Point(event.point);
-          areaPath.add(tmpP);
-          _pathList.push(tmpP)
-        }
-
-        // 如果点击靠近第一个点，闭合路径
-        if (_pathList.length > 2 && curPoint.getDistance(areaPath.segments[0].point) < 10) {
-          finish()
-        }
-
-        // 禁止出现曲线
-        for(const seg of areaPath.segments) {
-          const inP = seg['handleIn']
-          const outP = seg['handleOut']
-          if(inP) {
-            inP.x = 0
-            inP.y = 0
-          }
-          if(outP) {
-            outP.x = 0
-            outP.y = 0
-          }
-        }
+        deleteStack.length = 0 // 清空回退规则
       } else if(event.event.button === 2) {
         // 结束绘制
         finish()
       }
     }
-
     function mouseMove(event) {
-      const lastP = areaPath.segments[areaPath.segments.length - 1]
-      if(lastP) {
+      if(areaPath.segments.length > 1) {
+        const lastP = areaPath.segments[areaPath.segments.length - 1]
         lastP.point.x = event.point.x;
         lastP.point.y = event.point.y;
+        lastMousePos = event.point;
       }
     }
 
-    function keyUp(event) {
-      if (event.key === 'escape') {
-        areaPath.remove() // 停止绘制
+    function keyDown(event) {
+      if (event.event.ctrlKey && event.event.key === 'z') {
+        // 删除最后一个
+        if(areaPath.segments.length > 1) {
+          const setPoint = areaPath.segments[areaPath.segments.length - 2]
+          deleteStack.push(setPoint)
+          
+          // 删除 原始点 & 动态点
+          // 连续删除最后两个元素，编号都是n-1
+          areaPath.segments[areaPath.segments.length - 1].remove()
+          areaPath.segments[areaPath.segments.length - 1].remove()
+          
+          // 增加动态点
+          areaPath.add(new scope.Point(lastMousePos))
+        }
+      } else if (event.event.ctrlKey && event.event.key === 'y') {
+        // 恢复
+        if(deleteStack.length > 0) {
+          // 删除动态点
+          areaPath.segments[areaPath.segments.length - 1].remove()
+          
+          const item = deleteStack.pop()
+          // 增加原始点 & 动态点
+          areaPath.add(item);
+          areaPath.add(new scope.Point(lastMousePos))
+        }
+      } else if (event.key === 'escape') {
+        cancel()
       }
+    }
+    
+    function cancel() {
+      areaPath.remove() // 停止绘制
+      drawFinished()
+    }
+    
+    function drawFinished() {
+      svgConfig.history.unlock()
+      deleteStack.length = 0 // 清空回退规则
+      
+      svgConfig.tool.off('mousedown', mousedown)
+      svgConfig.tool.off('mouseup', mouseUp)
+      svgConfig.tool.off('mousemove', mouseMove)
+      svgConfig.tool.on('keydown', keyDown)
     }
 
     function finish(){
-      _pathList.length = 0
       areaPath.fullySelected = true;
       areaPath.closed = true;
       areaPath.data = {
@@ -799,14 +831,10 @@ export default function() {
 
       areaPath.fillColor = fillColor || { hue: hue, saturation: 1, lightness: lightness, alpha: 0.3 };
 
-      // 解除原绘制事件
-      svgConfig.tool.off('mousedown', mousedown)
-      svgConfig.tool.off('mouseup', mouseUp)
-      svgConfig.tool.off('mousemove', mouseMove)
-      svgConfig.tool.off('keyup', keyUp)
-
       bindPathEvent(areaPath)
       resolve(areaPath)
+
+      drawFinished()
     }
     return promise
   }

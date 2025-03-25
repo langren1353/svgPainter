@@ -720,10 +720,12 @@ export default function() {
     const deleteStack = []
 
     let resolve = null
+    let reject = null
     let lastMousePos = new scope.Point(0, 0); 
 
-    const promise = new Promise((__resolve) => {
+    const promise = new Promise((__resolve, __reject) => {
       resolve = __resolve
+      reject = __reject
     });
 
     svgConfig.tool.on('mousedown', mousedown) // 检查双击
@@ -734,7 +736,7 @@ export default function() {
     let lastClickTime = 0;
     function mousedown(event) {
       const now = Date.now();
-      const MaxTimeout = 200
+      const MaxTimeout = 400 // 双击判定间隔为400ms
       // 双击的时候，也完成绘制
       if (now - lastClickTime < MaxTimeout) {
         finish()
@@ -802,6 +804,7 @@ export default function() {
     }
     
     function cancel() {
+      reject({ msg: '用户停止绘制', areaPath })
       areaPath.remove() // 停止绘制
       drawFinished()
     }
@@ -858,19 +861,24 @@ export default function() {
 
     // 监听滚轮事件
     canvasTarget.addEventListener('wheel', function(event) {
+      
       if(!svgConfig.dragMoveBgEnable) return
+      svgConfig.areaWatch.filter(one => one.watchEvent === 'wheel').map(item => {
+        item.callback(event)
+      })
 
       const mousePos = scope.view.viewToProject(new scope.Point(event.offsetX, event.offsetY));
 
-      if (event.deltaY < 0) { // 滚轮向上滚动
+      if (event.deltaY < 0) { // 滚轮向上滚动 -> 放大动作
         svgConfig.curDrawScale = 1.1
         if(scope.view.zoom > svgConfig.dragMoveOptions.maxScale) {
           return;
         }
-      } else { // 滚轮向下滚动
+      } else { // 滚轮向下滚动 -> 缩小动作
         svgConfig.curDrawScale = 0.9
 
-        if(scope.view.zoom < svgConfig.dragMoveOptions.minScale) {
+        if(scope.view.zoom * svgConfig.curDrawScale  < svgConfig.dragMoveOptions.minScale) {
+          setToDefaultScale();
           return;
         }
       }
@@ -878,21 +886,14 @@ export default function() {
       event.preventDefault();
     }, { passive: false });
 
-    // 当缩放恢复到1时，重置偏移量
-    canvasTarget.addEventListener('wheel', function(event) {
-      if(!svgConfig.dragMoveBgEnable) return
-      svgConfig.areaWatch.filter(one => one.watchEvent === 'wheel').map(item => {
-        item.callback(event)
-      })
-      if (svgConfig.curDrawScale === svgConfig.dragMoveOptions.minScale) {
-        offsetX = 0;
-        offsetY = 0;
-        scope.view.center = new scope.Point(
-          (scope.view.bounds.width / 2),
-          (scope.view.bounds.height / 2)
-        );
-      }
-    });
+    function setToDefaultScale() {
+      offsetX = 0;
+      offsetY = 0;
+      scope.view.center = new scope.Point(
+        (scope.view.bounds.width / 2),
+        (scope.view.bounds.height / 2)
+      );
+    }
 
     // 监听鼠标按下事件
     canvasTarget.addEventListener('mousedown', function(event) {

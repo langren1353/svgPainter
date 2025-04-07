@@ -134,6 +134,9 @@ rect.center = view.center // 绘制在正中间
 rect.data = {
   area_name: '区域的名字', // 区域名会用于查询
   area_type: '自己取一个类名-用来给自己看的',
+  
+  area_editorLocked: false, // 是否锁定，不让编辑（新增、删除，调整节点位置）; 默认否
+  area_positionLocked: false, // 是否锁定，默认是未锁定（path拖拽位置变化） ; 默认否
 }
 // 事件绑定，否则无法触发事件
 svgPainter.EXP_addCustomShape(rect, svgPainter.svgConfig.LAYER_TYPE.AREA_TYPE_CUSTOM)
@@ -281,6 +284,10 @@ svgPainter.EXP_getLayer(svgPainter.svgConfig.LAYER_TYPE.AREA_TYPE_CUSTOM)
 ### 事件触发
 点击顶层元素，不会穿透到下一层
 其次不存在事件层级关系，只有绘制元素的层级关系，所以也不存在时间冒泡等
+禁止选中：
+```js
+path.noSelect = true; // 禁用选中，默认是false/undefined
+```
 
 ### 缩放说明
 缩放参数：svgPainter.svgConfig.curDrawScale = 当前缩放比例 get|set

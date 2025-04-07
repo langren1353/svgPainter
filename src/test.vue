@@ -13,6 +13,28 @@
 <script>
 import svgInit from './main.js'
 const svgPainter = svgInit()
+
+class BindPathMove {
+  constructor(pathA, pathB) {
+    this.pathA = pathA;
+    this.pathB = pathB;
+
+    this.initialPositionA = this.pathA.position;
+    this.initialPositionB = this.pathB.position;
+    this.__moveEventFunc = this._moveEventFunc.bind(this);
+  }
+  bind() {
+    this.pathA.on('mousedrag', this.__moveEventFunc);
+  }
+  unBind() {
+    this.pathA.off('mousedrag', this.__moveEventFunc);
+  }
+  _moveEventFunc(event) {
+    const delta = event.target.position.subtract(this.initialPositionA);
+    this.pathB.position = this.initialPositionB.add(delta);
+  }
+}
+
 export default {
   props: {
     src: {
@@ -26,7 +48,8 @@ export default {
       json: '',
       cameraMode: false,
       editAble: true,
-      draggable: false
+      draggable: false,
+      bindRes: null,
     }
   },
   mounted() {
@@ -57,7 +80,7 @@ export default {
     async init(p) {
       svgPainter.EXP_init({
         canvasSelector: '#myCanvas', // svg的选择器，默认为 #myCanvas
-        drawEnable: false, // 启用绘制，默认为false,
+        drawEnable: true, // 启用绘制，默认为false,
         dragMoveBgEnable: true, // 是否可以拖拽背景，缩放大背景：注意：这个和拖动绘制会产生冲突，拖拽结束后记得关
         dragMoveOptions: {
           minScale: 1, // 最小缩放比例
@@ -67,7 +90,9 @@ export default {
       this.loadJson()
       svgPainter.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async function(image, raster) {
         // 添加图片绘制区域
-        svgPainter.EXP_drawImage('./Camera.png', 0, 100, '图标1')
+        svgPainter.EXP_drawImage('./Camera.png', 0, 0, '图标1', (img, raster) => {
+          raster.noSelect = true
+        })
         svgPainter.EXP_drawImage('./Camera.png', 100, 100, '图标2')
         svgPainter.EXP_drawImage2('./Camera.png', 200, 100, 500, 40, '图标3')
       })
@@ -82,15 +107,23 @@ export default {
         console.log('我的自定义函数mouseenter：', path, event)
         // self.camaraPoint(event.point)
       })
+      const path1 = svgPainter.EXP_findAreaByName("区域-头部1731465579207")
+      const path2 = svgPainter.EXP_findAreaByName("摄像头1")
+      
+      this.bindRes = new BindPathMove(path1, path2)
+      this.bindRes.bind()
+      
+      // 获取到图标层，锁定图标层（无法选中，无法触发事件）,也不会被保存JSON传递
+      // const layer = svgPainter.EXP_getLayer(svgPainter.svgConfig.LAYER_TYPE.AREA_TYPE_IMG);
+      // layer.locked = true
     },
-    startDraw() {
+    async startDraw() {
+      this.bindRes.unBind()
       // let name1 = new Date().getTime()
       // const area2 = svgPainter.EXP_startDraw(`区域-头部${name1}`, '#ccaabb88')
-      svgPainter.EXP_startDrawArea(`区域-头部2`).then(data => {
-        console.log(data)
-      }).catch(data => {
-        console.error(data)
-      })
+      const newPath = await svgPainter.EXP_startDrawArea(`区域-头部2`)
+      newPath.data.area_editorLocked = true
+      newPath.data.area_positionLocked = true
     },
     getAllArea() {
       let allArea = svgPainter.EXP_areaGetAll()
@@ -151,6 +184,7 @@ export default {
     exportJson() {
       svgPainter.svgConfig.scope.activate()
       let json = svgPainter.EXP_exportJSON()
+      debugger
       this.json = json
     },
     drawArea() {

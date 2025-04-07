@@ -129,12 +129,16 @@ export default function() {
 
     if(activeShape) {
       EXP_deselectAll()
+      if(activeShape.noSelect) return;
       activeShape.selected = true;
     }
 
+    // debugger
     // 绘制的模式时，才可以修改
     if(!svgConfig.drawEnable) return;
-
+    if(hitResult.item.data.area_editorLocked) return; // 是否锁定，不让编辑（新增、删除，调整节点位置）
+    if(hitResult.item.data.area_positionLocked) return; // 是否锁定，默认是未锁定（path拖拽位置变化）
+    
     if (event.modifiers.shift) {
       if (hitResult.type === 'segment') {
         hitResult.segment.remove();
@@ -160,6 +164,7 @@ export default function() {
   function onMouseDrag(event) {
     // 绘制的模式时，才可以修改
     if(!svgConfig.drawEnable) return;
+    if(activeShape.noSelect) return;
 
     if (choosePoint) { // 增加点位
       choosePoint.point = choosePoint.point.add(event.delta);
@@ -429,6 +434,7 @@ export default function() {
     image.onload = () => {
       const raster = new scope.Raster(image);
       raster.position = scope.view.center;
+      raster.position = scope.view.center;
       raster.data = {
         area_name: area_name,
         area_type: AREA_TYPE_IMG,
@@ -640,6 +646,7 @@ export default function() {
     svgConfig.tool.on('mouseup', mouseUp)
 
     function mouseDown(event) {
+      debugger
       if (path) {
         path.selected = true;
       }
@@ -720,12 +727,10 @@ export default function() {
     const deleteStack = []
 
     let resolve = null
-    let reject = null
     let lastMousePos = new scope.Point(0, 0); 
 
-    const promise = new Promise((__resolve, __reject) => {
+    const promise = new Promise((__resolve) => {
       resolve = __resolve
-      reject = __reject
     });
 
     svgConfig.tool.on('mousedown', mousedown) // 检查双击
@@ -798,9 +803,11 @@ export default function() {
           areaPath.add(item);
           areaPath.add(new scope.Point(lastMousePos))
         }
-      } else if (event.key === 'escape') {
-        cancel()
-      }
+      } 
+      // remove escape func: for callback
+      // else if (event.key === 'escape') {
+      //   cancel()
+      // }
     }
     
     function cancel() {

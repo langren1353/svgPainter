@@ -133,12 +133,11 @@ export default function() {
       activeShape.selected = true;
     }
 
-    // debugger
     // 绘制的模式时，才可以修改
     if(!svgConfig.drawEnable) return;
     if(hitResult.item.data.area_editorLocked) return; // 是否锁定，不让编辑（新增、删除，调整节点位置）
     if(hitResult.item.data.area_positionLocked) return; // 是否锁定，默认是未锁定（path拖拽位置变化）
-    
+
     if (event.modifiers.shift) {
       if (hitResult.type === 'segment') {
         hitResult.segment.remove();
@@ -164,7 +163,11 @@ export default function() {
   function onMouseDrag(event) {
     // 绘制的模式时，才可以修改
     if(!svgConfig.drawEnable) return;
-    if(activeShape.noSelect) return;
+    if(!choosePoint && !activeShape) return; // 没有选中物
+    if(activeShape && activeShape.noSelect) return;
+    if(activeShape && activeShape.data.area_positionLocked) return; // 是否锁定，默认是未锁定（path拖拽位置变化）
+    // 如果是在组内的，那么不做事，因为其他地方有绑定了
+    if(activeShape && activeShape.parent.constructor === scope.Group) return; // 是否锁定，默认是未锁定（path拖拽位置变化）
 
     if (choosePoint) { // 增加点位
       choosePoint.point = choosePoint.point.add(event.delta);
@@ -202,11 +205,14 @@ export default function() {
     } else if (event.key === 'Delete') {
       // 删除选中元素
       if (activeShape) {
-        activeShape.remove();
+        // 如果是打成了一个组，那么删除整个组
+        const deleteItem = activeShape.parent.constructor === scope.Group ? activeShape.parent: activeShape
+        
+        deleteItem.remove();
         svgConfig.history.save()
 
         svgConfig.areaWatch.filter(one => one.watchEvent === 'delete').map(item => {
-          item.callback(event, activeShape)
+          item.callback(event, deleteItem)
         })
       }
     }
@@ -477,7 +483,6 @@ export default function() {
     }
   }
 
-
   /**
    * 绘制文本
    * @param textStr 文本内容
@@ -506,6 +511,71 @@ export default function() {
   }
 
   /**
+   * 绘制带背景色的文本
+   * @param {string} textStr - 要显示的文本内容
+   * @param {number} [x=50] - 文本的x坐标
+   * @param {number} [y=50] - 文本的y坐标
+   * @param {string} textName - 文本区域的名称
+   * @param {Object} [other_options={}] - 文本的额外选项
+   * @param {string} [other_options.fillColor='#f0f0f0'] - 背景填充颜色
+   * @param {string} [other_options.strokeColor='#cccccc'] - 背景边框颜色
+   * @param {Object} [bgOptions={}] - 背景的选项
+   * @param {string} [bgOptions.fillColor='#f0f0f0'] - 背景填充颜色
+   * @param {string} [bgOptions.strokeColor='#cccccc'] - 背景边框颜色
+   * @param {number} [bgOptions.strokeWidth=1] - 背景边框宽度
+   * @param {number} [bgOptions.padding=5] - 背景内边距
+   * @returns {scope.PointText} 创建的文本对象
+   */
+  function EXP_drawTextWithBG(textStr, x = 50, y = 50, textName, other_options = {}, bgOptions = {}) {
+    scope.activate();
+
+    // 创建文本对象
+    var text = new scope.PointText(Object.assign({
+      point: [x, y], // 文本的位置
+      content: textStr, // 文本内容
+      fillColor: 'black', // 文本颜色
+      fontFamily: 'Arial', // 字体
+      fontSize: 20, // 字体大小
+    }, other_options));
+
+    // 默认背景选项
+    var defaultBgOptions = {
+      fillColor: '#f0f0f0',
+      strokeColor: '#cccccc',
+      strokeWidth: 1,
+      padding: 5,
+    };
+    var finalBgOptions = Object.assign(defaultBgOptions, bgOptions);
+
+    var background = new scope.Path.Rectangle(text.bounds.expand(finalBgOptions.padding));
+    Object.assign(background, {
+      fillColor: finalBgOptions.fillColor,
+      strokeColor: finalBgOptions.strokeColor,
+      strokeWidth: finalBgOptions.strokeWidth,
+    });
+
+    // 将背景设置为文本的子元素并置于底层
+    background.parent = text;
+    background.sendToBack();
+
+    // 保存背景引用以便后续更新
+    // text.background = background;
+    var itemGroup = new scope.Group([background, text]); // 先加背景图，后加文字，否则会看不见
+    itemGroup.data = {
+      area_name: textName,
+      area_type: AREA_TYPE_TEXT,
+    };
+    
+    bindGroupEvent(itemGroup)
+
+    // 添加到图层
+    addToLayer(AREA_TYPE_TEXT, itemGroup);
+    bindPathEvent(itemGroup);
+
+    return itemGroup;
+  }
+
+  /**
    * 绘制线条
    * @param points 线条坐标点
    * @param lineName 线条名称
@@ -529,7 +599,101 @@ export default function() {
   }
 
   /**
-   * 区域线条绘制
+   * 绘制线条 - 带箭头（支持多种箭头类型）
+   * @param points 线条坐标点
+   * @param lineName 线条名称
+   * @param {Object} [other_options={}] - 文本的额外选项
+   * @param {string} [other_options.strokeColor='#f0f0f0'] - 线条颜色
+   * @param {string} [other_options.arrowType='triangle'] - triangle | circle
+   * @param {string} [other_options.arrowSize=10] - 箭头尺寸 | 圆头尺寸
+   * @param {string} [other_options.arrowColor=strokeColor] - 箭头颜色，默认继承线条颜色
+   * @returns {*} 线条对象
+   */
+  function EXP_drawLineWithArrow(points = [], lineName = '线条-未命名', other_options = {}) {
+    scope.activate();
+    // 创建主路径
+    const path = new scope.Path(Object.assign({
+      segments: points,
+      strokeColor: 'black',
+      fullySelected: true,
+    }, other_options));
+
+    var itemGroup = new scope.Group([path]);
+
+    // 设置路径数据
+    path.data = {
+      area_name: lineName,
+      area_type: AREA_TYPE_LINE,
+      area_editorLocked: true, // 默认不让编辑
+      area_positionLocked: true, // 默认不让编辑
+    };
+
+    // 如果点数少于2，直接返回普通路径
+    if (points.length < 2) {
+      throw new Error('线条必须两个点以上')
+    }
+
+    // 箭头参数
+    const arrowSize = other_options.arrowSize || 10;
+    const arrowColor = other_options.arrowColor || path.strokeColor;
+    const arrowType = other_options.arrowType || 'triangle'
+
+    // 为每个中间点添加箭头
+    for (let i = 1; i < points.length; i++) {
+      const prevPoint = points[i-1];
+      const currPoint = points[i];
+
+      // 计算线段方向
+      const vector = currPoint.subtract(prevPoint);
+      const angle = vector.angle;
+
+      let arrow;
+
+      if (arrowType === 'circle') {
+        // 创建圆形箭头
+        arrow = new scope.Path.Circle({
+          center: [0, 0],
+          radius: arrowSize/2,
+          fillColor: arrowColor,
+          strokeColor: arrowColor
+        });
+      } else {
+        // 默认创建三角形箭头
+        arrow = new scope.Path({
+          segments: [
+            [0, arrowSize/2],
+            [arrowSize, 0],
+            [0, -arrowSize/2]
+          ],
+          fillColor: arrowColor,
+          strokeColor: arrowColor,
+          closed: true
+        });
+      }
+
+      // 定位箭头
+      arrow.position = currPoint;
+      arrow.rotation = angle;
+
+      // 将箭头作为子路径添加到主路径
+      itemGroup.addChild(arrow);
+    }
+
+    itemGroup.data = {
+      area_name: lineName,
+      area_type: AREA_TYPE_LINE,
+      area_editorLocked: true, // 默认不让编辑
+      area_positionLocked: true, // 默认不让编辑
+    };
+
+    bindGroupEvent(itemGroup)
+    addToLayer(AREA_TYPE_LINE, itemGroup);
+    bindPathEvent(itemGroup);
+    return itemGroup;
+  }
+
+  /**
+   * 区域线条绘制 - 带箭头
    * @param areaNames 区域名称['A', 'B', 'C']
    * @param lineName 绘制的线条的名称
    * @param other_options 其他选项
@@ -545,23 +709,16 @@ export default function() {
       return area
     })
     if(areas.length > 1) {
-      const path = new scope.Path(Object.assign({
-        segments: areas.map(item => {
-          return {
-            x: item.bounds.left + item.bounds.width / 2,
-            y: item.bounds.top + item.bounds.height / 2
-          }
-        }),
-        strokeColor: 'black',
-        fullySelected: true,
-      }, other_options))
-      path.data = {
-        area_name: lineName,
-        area_type: AREA_TYPE_LINE,
-      }
-      addToLayer(AREA_TYPE_LINE, path)
-      bindPathEvent(path)
-      return path
+      const points = areas.map(item => {
+        return {
+          x: item.bounds.left + item.bounds.width / 2,
+          y: item.bounds.top + item.bounds.height / 2
+        }
+      })
+      
+      return EXP_drawLine(points, lineName, other_options)
+    } else {
+      throw new Error('区域数量不够')
     }
   }
 
@@ -573,6 +730,10 @@ export default function() {
       if (!item.area_type && !item.hasBindEvent) {
         item.hasBindEvent = true
         bindPathEvent(item)
+        
+        if(item.constructor === scope.Group) {
+          bindGroupEvent(item)
+        }
       }
     })
   }
@@ -646,7 +807,6 @@ export default function() {
     svgConfig.tool.on('mouseup', mouseUp)
 
     function mouseDown(event) {
-      debugger
       if (path) {
         path.selected = true;
       }
@@ -976,6 +1136,29 @@ export default function() {
       return false
     }
   }
+  
+  function bindGroupEvent(itemGroup) {
+    if(itemGroup.constructor !== scope.Group) {
+      throw "当前对象非Group，绑定失败"
+    } else {
+      // 绑定选中，要选中就整体选中
+      itemGroup.on('click', function(event) {
+        console.log(itemGroup.children)
+        itemGroup.selected = true;
+        itemGroup.children.forEach(function(child) {
+          child.selected = true;
+        });
+        event.stopPropagation();
+      });
+
+      // 绑定拖拽，要拖拽就整体拖拽
+      itemGroup.on('mousedrag', function(event) {
+        if(!svgConfig.drawEnable) return;
+        if(event.target.data.area_positionLocked) return; // 是否锁定，默认是未锁定（path拖拽位置变化）
+        itemGroup.position = itemGroup.position.add(event.delta)
+      });
+    }
+  }
 
   function init(myConfig  = {}) {
     if(isInitialized) {
@@ -1019,13 +1202,14 @@ export default function() {
     EXP_areaEvent,
     EXP_areaGetAll,
     EXP_drawLine,
+    EXP_drawLineWithArrow,
     EXP_drawAreaLine,
     EXP_startDraw,
     EXP_startDrawArea,
     EXP_drawImage,
     EXP_drawImage2,
     EXP_drawText,
-
+    EXP_drawTextWithBG,
     EXP_enableDragMoveBg,
     EXP_disableDragMoveBg,
     EXP_exportJSON,

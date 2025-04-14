@@ -70,6 +70,20 @@ path.opacity = 0.5 // 透明度
 // path.simplify(level=0) // 用于点位的自动缩减，一般用不上
 ```
 
+### 绘制线条带箭头
+```js
+const path = svgPainter1.EXP_drawLineWithArrow([{x: 0, y: 0}, {x: 50, y: 50}, {x: 30, y: 90}], '标记-直线1', {
+  strokeColor: '#ff0000',
+  strokeWidth: 8,
+})
+path.smooth() // 曲线
+path.closed() // 控制是否闭合
+path.strokeWidth = 10 // 线宽
+path.fillColor = '#ff0000' // 填充颜色
+path.opacity = 0.5 // 透明度
+// path.simplify(level=0) // 用于点位的自动缩减，一般用不上
+```
+
 ### 添加区域线条绘制 - 贝塞尔曲线
 > 说明：尝试用线条去拟合已有的区域，形成画线效果；支持事件
 ```js
@@ -87,6 +101,17 @@ path2.fillColor = '#ff0000' // 填充颜色
 ```js
 const path3 = svgPainter1.EXP_drawText('你好，我是测试文字', 50, 50, '标记-文字1', {
   strokeColor: '#0000ff',
+})
+```
+
+### 添加文字标记 - 带背景
+> 说明：添加普通文字绘制；支持事件
+```js
+const path3 = svgPainter1.EXP_drawTextWithBG('你好，我是测试文字', 50, 50, '标记-文字1', {
+  strokeColor: '#0000ff',
+}, {
+  fillColor: '#AAAAAA33',
+  strokeWidth: 0 // 无边框
 })
 ```
 

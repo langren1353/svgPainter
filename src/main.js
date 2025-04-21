@@ -320,8 +320,8 @@ export default function() {
     combineLayer(AREA_TYPE_BG)
     combineLayer(AREA_TYPE)
     combineLayer(AREA_TYPE_CUSTOM)
-    combineLayer(AREA_TYPE_LINE)
     combineLayer(AREA_TYPE_IMG)
+    combineLayer(AREA_TYPE_LINE)
     combineLayer(AREA_TYPE_TEXT)
 
     // 只保留一个最后的唯一的一个背景图，其他的背景图都删掉
@@ -1183,8 +1183,8 @@ export default function() {
     createLayer(AREA_TYPE_BG)
     createLayer(AREA_TYPE)
     createLayer(AREA_TYPE_CUSTOM)
-    createLayer(AREA_TYPE_LINE)
     createLayer(AREA_TYPE_IMG)
+    createLayer(AREA_TYPE_LINE)
     createLayer(AREA_TYPE_TEXT)
   }
 

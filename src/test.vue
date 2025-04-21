@@ -89,7 +89,7 @@ export default {
         }
       })
       let image;
-      // this.loadJson()
+      this.loadJson()
       svgPainter.EXP_loadBackground('https://pic.nfapp.southcn.com/nfplus/ossfs/pic/xy/202106/26/d4cd072c-4966-4371-8f8a-76730efd94d8.jpg', async function(image, raster) {
         // 添加图片绘制区域
         svgPainter.EXP_drawImage('./Camera.png', 0, 0, '图标1', (img, raster) => {
@@ -116,6 +116,7 @@ export default {
         console.log('我的自定义函数mouseenter：', path, event)
         // self.camaraPoint(event.point)
       })
+      
       // const path1 = svgPainter.EXP_findAreaByName("区域-头部1731465579207")
       // const path2 = svgPainter.EXP_findAreaByName("摄像头1")
       //
